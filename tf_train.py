@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import os
 from os import listdir
 import glob
@@ -5,6 +7,7 @@ import random
 import matplotlib as mat
 import matplotlib.pyplot as plt
 from matplotlib.image import imread
+import matplotlib.image as mpimg
 import cv2
 import numpy as np
 import pandas as pd
@@ -18,6 +21,7 @@ from sklearn.preprocessing import LabelEncoder
 
 import tensorflow as tf
 from tensorflow import keras
+from tensorflow.keras import layers
 
 from PIL import Image
 from pathlib import Path
@@ -25,7 +29,7 @@ import pprint
 pp = pprint.PrettyPrinter(indent=4)
 
 #CONSTANTS
-EPOCHS = 50
+EPOCHS = 25
 dataset_path = '../Final Year Project\Datasets\cvcl.mit.edu\**\*.jpg'
 
 #get dataset
@@ -62,17 +66,40 @@ for i in range(25):
     plt.ylabel(unique_labels[y_train[i]])
 plt.show()
 
-model = keras.Sequential([
-    keras.layers.Flatten(input_shape=(256, 256, 3)),
-    keras.layers.Dense(128, activation='relu'),
-    keras.layers.Dense(len(unique_labels), activation='softmax')
-])
+def make_discriminator():
+    model = keras.Sequential([
+        keras.layers.Flatten(input_shape=(256, 256, 3)),
+        keras.layers.Dense(128, activation='relu'),
+        keras.layers.Dense(len(unique_labels), activation='softmax')
+    ])
 
-model.compile(optimizer='adam',
-            loss='sparse_categorical_crossentropy',
-            metrics=['accuracy'])
+    model.compile(optimizer='adam',
+                loss='sparse_categorical_crossentropy',
+                metrics=['accuracy'])
 
-model.fit(X_train, y_train, epochs=EPOCHS)
+    model.fit(X_train, y_train, epochs=EPOCHS)
 
-test_loss, test_acc = model.evaluate(X_test,  y_test, verbose=2)
-print('\nTest accuracy:', test_acc)
+    test_loss, test_acc = model.evaluate(X_test,  y_test, verbose=2)
+    print('\nTest accuracy:', test_acc)
+    
+    return model
+
+discriminator  = make_discriminator()
+
+def make_generator_model():
+    model = tf.keras.Sequential()
+    model.add(layers.Dense(7*7*256, use_bias=False, input_shape=(100,)))
+    model.add(layers.BatchNormalization())
+    model.add(layers.LeakyReLU())
+
+    model.add(layers.Reshape((7, 7, 256)))
+    assert model.output_shape == (None, 7, 7, 256)
+    
+
+    return model
+
+generator = make_generator_model()
+
+img = mpimg.imread('test.png')
+print(img)
+plt.imshow(img)
