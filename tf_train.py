@@ -21,7 +21,10 @@ from sklearn.preprocessing import LabelEncoder
 
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras import layers
+from tensorflow.keras.layers import Input, Reshape, Dropout, Dense, Flatten, BatchNormalization, Activation, ZeroPadding2D
+from tensorflow.keras.layers import LeakyReLU
+from tensorflow.keras.layers import UpSampling2D, Conv2D
+from tensorflow.keras.models import Sequential, Model, load_model
 
 from PIL import Image
 from pathlib import Path
@@ -30,10 +33,11 @@ pp = pprint.PrettyPrinter(indent=4)
 
 #CONSTANTS
 EPOCHS = 25
-dataset_path = '../Final Year Project\Datasets\cvcl.mit.edu\**\*.jpg'
+DATA_PATH  = '../Final Year Project\Datasets\cvcl.mit.edu\**\*.jpg'
+BUFFER_SIZE = 60000
 
 #get dataset
-files = glob.glob(dataset_path)
+files = glob.glob(DATA_PATH)
 
 #pre-process data
 images = np.array([np.array(Image.open(image)) for image in files])
@@ -55,16 +59,16 @@ print("y shape : ", y.shape)
 print("Split X shape : ", X_train.shape, X_test.shape)
 print("Split y shape : ", y_train.shape, y_test.shape)
 
-plt.figure(figsize=(10,10))
-for i in range(25):
-    plt.subplot(5,5,i+1)
-    plt.xticks([])
-    plt.yticks([])
-    plt.grid(False)
-    plt.imshow(X_train[i])
-    plt.xlabel(y_train[i])
-    plt.ylabel(unique_labels[y_train[i]])
-plt.show()
+# plt.figure(figsize=(10,10))
+# for i in range(25):
+#     plt.subplot(5,5,i+1)
+#     plt.xticks([])
+#     plt.yticks([])
+#     plt.grid(False)
+#     plt.imshow(X_train[i])
+#     plt.xlabel(y_train[i])
+#     plt.ylabel(unique_labels[y_train[i]])
+# plt.show()
 
 def make_discriminator():
     model = keras.Sequential([
@@ -82,24 +86,30 @@ def make_discriminator():
     test_loss, test_acc = model.evaluate(X_test,  y_test, verbose=2)
     print('\nTest accuracy:', test_acc)
     
-    return model
+    return model 
 
 discriminator  = make_discriminator()
 
 def make_generator_model():
-    model = tf.keras.Sequential()
-    model.add(layers.Dense(7*7*256, use_bias=False, input_shape=(100,)))
-    model.add(layers.BatchNormalization())
-    model.add(layers.LeakyReLU())
-
-    model.add(layers.Reshape((7, 7, 256)))
-    assert model.output_shape == (None, 7, 7, 256)
+    """
+    Returns generator as Keras model.
+    """
+    input = Input(shape=(256, 256, 1))
     
+    conv = Conv2D(64, (3,3), activation="relu")(input)
+    conv = BatchNormalization()(conv)
+    
+    conv = Conv2D(128, (3,3), activation="relu")(input)
+    conv = BatchNormalization()(conv)
+    
+    conv = Conv2D(64, (3,3), activation="relu")(input)
+    conv = BatchNormalization()(conv)
 
+    model = Model(inputs=input,outputs=conv)
     return model
 
-generator = make_generator_model()
 
+generator = make_generator_model()
 img = mpimg.imread('test.png')
 print(img)
 plt.imshow(img)
