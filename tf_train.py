@@ -47,6 +47,7 @@ class GAN():
         self.generator_input = (256,256,1) #used for the L layer of L*A*B* (grayscale image)
         self.discriminator_input = (256,256,2) #used for the A and B layers of L*A*B*
         
+        print("\nCreating Generator")
         #Create the generator 
         self.generator = self.make_generator()
         g_opt = Adam(lr=.001)
@@ -54,6 +55,7 @@ class GAN():
         print('Generator Summary...')
         print(self.generator.summary())
         
+        print("\nCreating Discrimiator")
         #Create the classifier/discrimiator 
         self.discriminator = self.make_discriminator()
         d_opt = Adam(lr=.0001)
@@ -62,7 +64,7 @@ class GAN():
         print(self.discriminator.summary())
         
         
-        gan_input = Input(shape=self.g_input_shape) #Give an input shape to the GAN
+        gan_input = Input(shape=self.generator_input) #Give an input shape to the GAN
         img_color = self.generator(gan_input) #generator of input shape
         
         #Need to make this false as the discrimiator will automatically scale itself and make itself a fairer adversary thus ruining the GAN
@@ -72,8 +74,8 @@ class GAN():
         self.gan = Model(gan_input,real_or_fake) #
         opt = Adam(lr=.001)
         self.gan.compile(loss='binary_crossentropy', optimizer=opt) #Compiles the gan 
-        print('\n')
-        print('GAN summary...')
+        
+        print('\nGAN summary...')
         print(self.gan.summary())
 
     def make_discriminator(self):
@@ -93,7 +95,7 @@ class GAN():
         # print('\nTest accuracy:', test_acc)
         
         model = Sequential()
-        model.add(Conv2D(32, (3, 3), padding='same', input_shape=self.d_input_shape, strides=2))
+        model.add(Conv2D(32, (3, 3), padding='same', input_shape=self.discriminator_input, strides=2))
         model.add(LeakyReLU(.2))
         # model.add(Dropout(.25))
 
@@ -132,7 +134,7 @@ class GAN():
         
         g_input = Input(shape=self.generator_input)
         
-        conv = Conv2D(64, (3,3), activation="relu")(input)
+        conv = Conv2D(64, (3,3), activation="relu")(g_input)
         conv = BatchNormalization()(conv)
         
         conv = Conv2D(128, (3,3), activation="relu")(conv)
@@ -178,7 +180,7 @@ class GAN():
         Inputs: X_train L channel, X_train AB channels, X_test L channel, X_test AB channels, number of epochs.
         Outputs: Models are saved and loss/acc plots saved.
         """
-
+        
         # self.train_discriminator(X_train_L, X_train_AB, X_test_L, X_test_AB)
         g_losses = []
         d_losses = []
@@ -187,12 +189,15 @@ class GAN():
         n = len(X_train)
         y_train_fake = np.zeros([n,1])
         y_train_real = np.ones([n,1])
+        
         for e in range(epochs):
+            print(e, "Generating images")
             #generate images
             np.random.shuffle(X_train)
             generated_images = self.generator.predict(X_train, verbose=1)
             np.random.shuffle(X_train_AB)
 
+            print(e, "Train Discriminator")
             #Train Discriminator
             d_loss  = self.discriminator.fit(x=X_train_AB, y=y_train_real,  batch_size=16, epochs=1)
             if e % 3 == 2:
@@ -204,6 +209,7 @@ class GAN():
             print('d_loss:', d_loss.history['loss'][-1])
             # print("Discriminator Accuracy: ", disc_acc)
 
+            print(e, "train GAN on grayscaled images")
             #train GAN on grayscaled images , set output class to colorized
             g_loss = self.gan.fit(x=X_train, y=y_train_real, batch_size=16, epochs=1)
 
@@ -251,41 +257,45 @@ if __name__ == '__main__':
     #y = labels
     # y = np.array(list(map(lambda x: unique_labels.index(x), labels)))
     # print(np.unique(y))
-    #print("SAMPLE IMAGE ARRAY", X[1])
-    # print("Converting from RGB to L*A*B*")
-    # for img in X: 
-    #     img = color.rgb2lab(img)
     
-    print("Splitting test and train")
+    print("Converting from RGB to L*A*B*")
+    for img in X: 
+        img = color.rgb2lab(img)
+    
+    print("\nSplitting test and train")
     X_train, X_test = train_test_split(X, test_size=0.2, random_state=42)
     #X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
-    print("X shape : ", X.shape)
+    print("\nX shape : ", X.shape)
     # print("y shape : ", y.shape)
     print("Split X shape : ", X_train.shape, X_test.shape)
     # print("Split y shape : ", y_train.shape, y_test.shape)
 
-    print("Splitting the L* layer")
+    print("\nSplitting the L* layer")
     X_train_L = np.array([i[:, :, 0] for i in X_train])
     X_test_L = np.array([i[:, :, 0] for i in X_test])
+    X_train_L = X_train_L.astype('float32')
+    X_test_L = X_test_L.astype('float32')
     print("X_train_L shape : ", X_train_L.shape)
     print("X_test_L shape : ", X_test_L.shape)
     
-    print("Splitting the A*B* layers")
+    print("\nSplitting the A*B* layers")
     X_train_AB = np.zeros((X_train.shape[0],256,256,2), 'uint8')
     X_test_AB = np.zeros((X_test.shape[0],256,256,2), 'uint8')
     X_train_AB[..., 0] = [i[:, :, 1] for i in X_train]
     X_train_AB[..., 1] = [i[:, :, 2] for i in X_train]
     X_test_AB[..., 0] = [i[:, :, 1] for i in X_test]
     X_test_AB[..., 1] = [i[:, :, 2] for i in X_test]
+    X_train_AB = X_train_AB.astype('float32')
+    X_test_AB = X_test_AB.astype('float32')
     
     # X_train_AB = np.dstack((np.array([i[:, :, 1] for i in X_train]),np.array()))
     # X_test_AB = np.array([[i[:, :, 1],i[:, :, 2]] for i in X_test])
     print("X_train_AB shape : ", X_train_AB.shape)
     print("X_test_AB shape : ", X_test_AB.shape)
     
-    # gan = GAN()
-    # gan.train(X_train_L, X_train_AB, X_test_L, X_test_AB, EPOCHS)
+    gan = GAN()
+    gan.train(X_train_L, X_train_AB, X_test_L, X_test_AB, EPOCHS)
     
     # plt.figure(figsize=(10,10))
     # for i in range(25):
