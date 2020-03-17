@@ -279,6 +279,14 @@ if __name__ == '__main__':
     print("X_train_L shape : ", X_train_L.shape)
     print("X_test_L shape : ", X_test_L.shape)
     
+    # Add new dimension
+    X_train_L = np.expand_dims(X_train_L, axis=-1)
+    print("NEW X_train_L shape : ", X_train_L.shape)
+    X_test_L = np.expand_dims(X_test_L, axis=-1)
+    print("X_test_L shape : ", X_test_L.shape)
+    
+    
+    
     print("\nSplitting the A*B* layers")
     X_train_AB = np.zeros((X_train.shape[0],256,256,2), 'uint8')
     X_test_AB = np.zeros((X_test.shape[0],256,256,2), 'uint8')
@@ -296,15 +304,4 @@ if __name__ == '__main__':
     
     gan = GAN()
     gan.train(X_train_L, X_train_AB, X_test_L, X_test_AB, EPOCHS)
-    
-    # plt.figure(figsize=(10,10))
-    # for i in range(25):
-    #     plt.subplot(5,5,i+1)
-    #     plt.xticks([])
-    #     plt.yticks([])
-    #     plt.grid(False)
-    #     plt.imshow(X_train[i])
-    #     plt.xlabel(y_train[i])
-    #     plt.ylabel(unique_labels[y_train[i]])
-    # plt.show()
     
