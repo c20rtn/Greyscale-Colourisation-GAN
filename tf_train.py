@@ -33,7 +33,12 @@ from pathlib import Path
 import pprint
 from keras.layers.pooling import AveragePooling2D
 pp = pprint.PrettyPrinter(indent=4)
+from tensorflow.compat.v1 import ConfigProto
+from tensorflow.compat.v1 import InteractiveSession
 
+config = ConfigProto()
+config.gpu_options.allow_growth = True
+session = InteractiveSession(config=config)
 #CONSTANTS
 EPOCHS = 20
 DATA_PATH  = '../Final Year Project\Datasets\cvcl.mit.edu\**\*.jpg'
@@ -79,20 +84,6 @@ class GAN():
         print(self.gan.summary())
 
     def make_discriminator(self):
-        # model = keras.Sequential([
-        #     keras.layers.Flatten(input_shape=self.discriminator_input),
-        #     keras.layers.Dense(128, activation='relu'),
-        #     keras.layers.Dense(len(unique_labels), activation='softmax')
-        # ])
-
-        # model.compile(optimizer='adam',
-        #             loss='sparse_categorical_crossentropy',
-        #             metrics=['accuracy'])
-
-        # model.fit(X_train, y_train, epochs=EPOCHS)
-
-        # test_loss, test_acc = model.evaluate(X_test,  y_test, verbose=2)
-        # print('\nTest accuracy:', test_acc)
         
         model = Sequential()
         model.add(Conv2D(32, (3, 3), padding='same', input_shape=self.discriminator_input, strides=2))
@@ -111,20 +102,12 @@ class GAN():
         model.add(LeakyReLU(.2))
         model.add(Dropout(.25))
 
-        # model.add(AveragePooling2D(pool_size=(2, 2)))
         model.add(Conv2D(256, (3, 3), padding='same',strides=2))
         model.add(BatchNormalization())
         model.add(LeakyReLU(.2))
         model.add(Dropout(.5))
 
-        # model.add(Conv2D(512, (3, 3), padding='same',strides=2))
-        # model.add(BatchNormalization())
-        # model.add(LeakyReLU(.2))
-        # model.add(Dropout(.25))
-
         model.add(Flatten())
-        # model.add(Dense(512))
-        # model.add(Dropout(.5))
         model.add(Dense(1))
         model.add(Activation('sigmoid'))
 
@@ -143,7 +126,7 @@ class GAN():
         conv = Conv2D(64, (3,3), activation="relu")(conv)
         conv = BatchNormalization()(conv)
 
-        model = Model(inputs=g_input,outputs=conv)
+        model = Model(inputs=g_input, outputs=conv)
         return model
 
     def train_discriminator(self, X_train_L, X_train_AB, X_test_L, X_test_AB):
@@ -176,7 +159,8 @@ class GAN():
     
     def train(self, X_train_L, X_train_AB, X_test_L, X_test_AB, epochs):
         """
-        Training loop for GAN. First the discriminator is fit with real and fake images. Next the Generator is fit. This is possible because the weights in the Discriminator are fixed and not affected by back propagation.
+        Training loop for GAN. First the discriminator is fit with real and fake images. 
+        Next the Generator is fit. This is possible because the weights in the Discriminator are fixed and not affected by back propagation.
         Inputs: X_train L channel, X_train AB channels, X_test L channel, X_test AB channels, number of epochs.
         Outputs: Models are saved and loss/acc plots saved.
         """
@@ -190,39 +174,56 @@ class GAN():
         y_train_fake = np.zeros([n,1])
         y_train_real = np.ones([n,1])
         
+        print("\nX_train shape : ", X_train.shape, "\n")
+        print("X_train len shape : ", n, "\n")
+        print("y_train_fake shape : ", y_train_fake.shape, "\n")
+        print("y_train_real shape : ", y_train_real.shape, "\n")
+        print("X_train_L shape : ", X_train_L.shape, "\n")
+        print("X_train_AB shape : ", X_train_AB.shape, "\n\n")
+        
         for e in range(epochs):
+            
             print(e, "Generating images")
             #generate images
             np.random.shuffle(X_train)
-            generated_images = self.generator.predict(X_train, verbose=1)
-            np.random.shuffle(X_train_AB)
+            batch_dataset = np.array_split(X_train, 16)
+            
+            for batch in batch_dataset:
+                print(e, "predicting images")
+                generated_images = self.generator.predict(batch, verbose=1)
+                print(e, "shuffling images")
+                np.random.shuffle(X_train_AB)
 
-            print(e, "Train Discriminator")
-            #Train Discriminator
-            d_loss  = self.discriminator.fit(x=X_train_AB, y=y_train_real,  batch_size=16, epochs=1)
-            if e % 3 == 2:
-                noise = np.random.rand(n,256,256,2) * 2 -1
-                d_loss = self.discriminator.fit(x=noise, y=y_train_fake, batch_size=16, epochs=1)
-            d_loss = self.discriminator.fit(x=generated_images, y=y_train_fake, batch_size=16, epochs=1)
-            d_losses.append(d_loss.history['loss'][-1])
-            d_acc.append(d_loss.history['acc'][-1])
-            print('d_loss:', d_loss.history['loss'][-1])
-            # print("Discriminator Accuracy: ", disc_acc)
+                print(e, "Train Discriminator")
+                #Train Discriminator
+                d_loss  = self.discriminator.fit(x=X_train_AB, y=y_train_real,  batch_size=16, epochs=1)
+                if e % 3 == 2:
+                    noise = np.random.rand(n,256,256,2) * 2 -1
+                    d_loss = self.discriminator.fit(x=noise, y=y_train_fake, batch_size=16, epochs=1)
+                    
+                print("\ngenerated_images : ", generated_images.shape, "\n")
+                print("y_train_fake shape : ", y_train_fake.shape, "\n")
+                
+                d_loss = self.discriminator.fit(x=generated_images, y=y_train_fake, batch_size=16, epochs=1)
+                d_losses.append(d_loss.history['loss'][-1])
+                d_acc.append(d_loss.history['acc'][-1])
+                print('d_loss:', d_loss.history['loss'][-1])
+                # print("Discriminator Accuracy: ", disc_acc)
 
-            print(e, "train GAN on grayscaled images")
-            #train GAN on grayscaled images , set output class to colorized
-            g_loss = self.gan.fit(x=X_train, y=y_train_real, batch_size=16, epochs=1)
+                print(e, "train GAN on grayscaled images")
+                #train GAN on grayscaled images , set output class to colorized
+                g_loss = self.gan.fit(x=batch, y=y_train_real, batch_size=16, epochs=1)
 
-            #Record Losses/Acc
-            g_losses.append(g_loss.history['loss'][-1])
-            print('Generator Loss: ', g_loss.history['loss'][-1])
-            disc_acc = d_loss.history['acc'][-1]
+                #Record Losses/Acc
+                g_losses.append(g_loss.history['loss'][-1])
+                print('Generator Loss: ', g_loss.history['loss'][-1])
+                disc_acc = d_loss.history['acc'][-1]
 
-            # Retrain Discriminator if accuracy drops below .8
-            if disc_acc < .8 and e < (epochs / 2):
-                self.train_discriminator(X_train_L, X_train_AB, X_test_L, X_test_AB)
-            if e % 5 == 4:
-                print(e + 1,"batches done")
+                # Retrain Discriminator if accuracy drops below .8
+                if disc_acc < .8 and e < (epochs / 2):
+                    self.train_discriminator(X_train_L, X_train_AB, X_test_L, X_test_AB)
+                if e % 5 == 4:
+                    print(e + 1,"batches done")
 
         self.plot_losses(g_losses,'Generative Loss', epochs)
         self.plot_losses(d_acc, 'Discriminative Accuracy',epochs)
