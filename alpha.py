@@ -1,0 +1,132 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+from skimage.color import rgb2lab, lab2rgb, rgb2gray
+from skimage.io import imsave
+import glob
+import numpy as np
+import os
+import random
+import time
+import cv2
+import matplotlib as mat
+import matplotlib.pyplot as plt
+from matplotlib.image import imread
+import matplotlib.image as mpimg
+import tensorflow as tf
+import tensorflow.keras as k
+from tensorflow.compat.v1 import ConfigProto
+from tensorflow.compat.v1 import InteractiveSession
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.layers import Conv2D, Conv2DTranspose, UpSampling2D
+from tensorflow.keras.layers import Activation, Dense, Dropout, Flatten, InputLayer
+from tensorflow.keras.layers import Input, Reshape, Dropout, Dense, Flatten, BatchNormalization, Activation, ZeroPadding2D
+from tensorflow.keras.layers import LeakyReLU
+from tensorflow.keras.callbacks import TensorBoard
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
+
+config = ConfigProto()
+config.gpu_options.allow_growth = True
+session = InteractiveSession(config=config)
+
+DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\coast\\n203015.jpg'
+TEST_PATH  = 'test\\beach.jpg'
+EPOCHS = 500
+
+# Get images
+image = img_to_array(load_img(DATA_PATH))
+image = np.array(image, dtype=float)
+testimage = img_to_array(load_img(TEST_PATH))
+
+X = rgb2lab(1.0/255*image)[:,:,0]
+Y = rgb2lab(1.0/255*image)[:,:,1:]
+Y /= 128
+X = X.reshape(1, 256, 256, 1)
+Y = Y.reshape(1, 256, 256, 2)
+
+testimage = rgb2lab(1.0/255*testimage)[:,:,0]
+testimage = testimage.reshape(1, 256, 256, 1)
+
+# Building the neural network
+model = k.Sequential()
+model.add(InputLayer(input_shape=(None, None, 1)))
+model.add(Conv2D(8, (3, 3), activation='relu', padding='same', strides=2))
+model.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
+model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
+model.add(Conv2D(16, (3, 3), activation='relu', padding='same', strides=2))
+model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+model.add(Conv2D(32, (3, 3), activation='relu', padding='same', strides=2))
+model.add(UpSampling2D((2, 2)))
+model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+model.add(UpSampling2D((2, 2)))
+model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
+model.add(UpSampling2D((2, 2)))
+model.add(Conv2D(2, (3, 3), activation='tanh', padding='same'))
+
+# Finish model
+model.compile(optimizer='rmsprop',loss='mse')
+
+model.fit(x=X, 
+    y=Y,
+    batch_size=1,
+    epochs=EPOCHS)
+
+print(model.evaluate(X, Y, batch_size=1))
+
+testimage = img_to_array(load_img(TEST_PATH))
+testimage = rgb2lab(1.0/255*testimage)[:,:,0]
+testimage = testimage.reshape(1, 256, 256, 1)
+
+output = model.predict(testimage)
+output *= 128
+
+print("\nShow colorizations")
+
+L_layer = testimage[:,:,:,0]
+A_layer = output[:,:,:,0]
+B_layer = output[:,:,:,1]
+print("\nL_layer", L_layer.shape)
+print("\nA_layer", A_layer.shape)
+print("\nB_layer", B_layer.shape)
+
+# Output colorizations
+print("\nOutput colorizations")
+
+timestr = time.strftime("%Y%m%d-%H%M%S")
+
+cur = np.zeros((256, 256, 3))
+cur[:,:,0] = testimage[0][:,:,0]
+cur[:,:,1:] = output[0]
+
+def extract_single_dim_from_LAB_convert_to_RGB(image,idim):
+    '''
+    image is a single lab image of shape (None,None,3)
+    '''
+    z = np.zeros(image.shape)
+    if idim != 0 :
+        z[:,:,0]=80 ## I need brightness to plot the image along 1st or 2nd axis
+    z[:,:,idim] = image[:,:,idim]
+    z = lab2rgb(z)
+    return(z)
+
+fig, ax = plt.subplots(1, 4, figsize = (15, 5))
+
+ax[0].imshow(lab2rgb(cur)) 
+ax[0].axis('off')
+ax[0].set_title('Lab scaled')
+
+ax[1].imshow(extract_single_dim_from_LAB_convert_to_RGB(cur,0)) 
+ax[1].axis('off')
+ax[1].set_title("L: lightness")
+
+ax[2].imshow(extract_single_dim_from_LAB_convert_to_RGB(cur,1)) 
+ax[2].axis('off')
+ax[2].set_title("A: color spectrums green to red")
+
+ax[3].imshow(extract_single_dim_from_LAB_convert_to_RGB(cur,2)) 
+ax[3].axis('off')
+ax[3].set_title("B: color spectrums blue to yellow")
+
+plt.show()
+
+# imsave("result\\alpha\\"+"img_result.png"+timestr+".png", lab2rgb(cur))
+# imsave("result\\alpha\\"+"img_gray_version.png"+timestr+".png", rgb2gray(lab2rgb(cur)))
