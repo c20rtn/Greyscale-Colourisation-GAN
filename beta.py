@@ -28,46 +28,80 @@ config = ConfigProto()
 config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
 
-DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\coast\\n203015.jpg'
+DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\coast\\*.jpg'
 TEST_PATH  = 'test\\*.jpg'
-EPOCHS = 500
+EPOCHS = 100
+BATCH_SIZE = 16
+EPOCH_STEPS = 16
 
 # Get images
-image = img_to_array(load_img(DATA_PATH))
-image = np.array(image, dtype=float)
 testimages = glob.glob(TEST_PATH)
+X = []
+files = glob.glob(DATA_PATH)
+for filename in files:
+    X.append(img_to_array(load_img(filename)))
+X = np.array(X, dtype=float)
 
-X = rgb2lab(1.0/255*image)[:,:,0]
-Y = rgb2lab(1.0/255*image)[:,:,1:]
-Y /= 128
-X = X.reshape(1, 256, 256, 1)
-Y = Y.reshape(1, 256, 256, 2)
+print("\nData", X.shape)
 
-# Building the neural network
+print("\nSet up train and test data")
+# Set up train and test data
+split = int(0.95*len(X))
+Xtrain = X[:split]
+Xtrain = 1.0/255*Xtrain
+print("\nXtrain", Xtrain.shape)
+
+print("\nCreating Model")
 model = k.Sequential()
-model.add(InputLayer(input_shape=(None, None, 1)))
-model.add(Conv2D(8, (3, 3), activation='relu', padding='same', strides=2))
-model.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
-model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
-model.add(Conv2D(16, (3, 3), activation='relu', padding='same', strides=2))
-model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
-model.add(Conv2D(32, (3, 3), activation='relu', padding='same', strides=2))
+model.add(InputLayer(input_shape=(256, 256, 1)))
+model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+model.add(Conv2D(64, (3, 3), activation='relu', padding='same', strides=2))
+model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+model.add(Conv2D(128, (3, 3), activation='relu', padding='same', strides=2))
+model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+model.add(Conv2D(256, (3, 3), activation='relu', padding='same', strides=2))
+model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
+model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+model.add(UpSampling2D((2, 2)))
+model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
 model.add(UpSampling2D((2, 2)))
 model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
-model.add(UpSampling2D((2, 2)))
-model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
-model.add(UpSampling2D((2, 2)))
 model.add(Conv2D(2, (3, 3), activation='tanh', padding='same'))
+model.add(UpSampling2D((2, 2)))
+model.compile(optimizer='rmsprop', loss='mse')
 
-# Finish model
-model.compile(optimizer='rmsprop',loss='mse')
+print("\nImage transformer")
+# Image transformer
+datagen = ImageDataGenerator(
+        shear_range=0.2,
+        zoom_range=0.2,
+        rotation_range=20,
+        horizontal_flip=True)
 
-model.fit(x=X, 
-    y=Y,
-    batch_size=1,
-    epochs=EPOCHS)
+print("\nGenerate training data")
+# Generate training data
+def image_a_b_gen(batch_size):
+    for batch in datagen.flow(Xtrain, batch_size=batch_size):
+        lab_batch = rgb2lab(batch)
+        X_batch = lab_batch[:,:,:,0]
+        Y_batch = lab_batch[:,:,:,1:] / 128
+        yield (X_batch.reshape(X_batch.shape+(1,)), Y_batch)
 
-print(model.evaluate(X, Y, batch_size=1))
+print("\nTrain model")
+# Train model      
+tensorboard = TensorBoard(log_dir="output\\first_run")
+
+print("\nfit_generator")
+model.fit_generator(image_a_b_gen(BATCH_SIZE), callbacks=[tensorboard], epochs=EPOCHS, steps_per_epoch=EPOCH_STEPS)
+
+print("\nTest images")
+# Test images
+Xtest = rgb2lab(1.0/255*X[split:])[:,:,:,0]
+Xtest = Xtest.reshape(Xtest.shape+(1,))
+Ytest = rgb2lab(1.0/255*X[split:])[:,:,:,1:]
+Ytest = Ytest / 128
+print(model.evaluate(Xtest, Ytest, batch_size=BATCH_SIZE))
 
 for img in testimages:
     testimage = img_to_array(load_img(img))
@@ -79,12 +113,12 @@ for img in testimages:
 
     print("\nShow colorizations")
 
-    L_layer = testimage[:,:,:,0]
-    A_layer = output[:,:,:,0]
-    B_layer = output[:,:,:,1]
-    print("\nL_layer", L_layer.shape)
-    print("\nA_layer", A_layer.shape)
-    print("\nB_layer", B_layer.shape)
+    # L_layer = testimage[:,:,:,0]
+    # A_layer = output[:,:,:,0]
+    # B_layer = output[:,:,:,1]
+    # print("\nL_layer", L_layer.shape)
+    # print("\nA_layer", A_layer.shape)
+    # print("\nB_layer", B_layer.shape)
 
     # Output colorizations
     print("\nOutput colorizations")
@@ -114,11 +148,11 @@ for img in testimages:
 
     ax[1].imshow(lab2rgb(cur)) 
     ax[1].axis('off')
-    ax[1].set_title('Lab scaled')
+    ax[1].set_title('Colourised')
 
     ax[2].imshow(extract_single_dim_from_LAB_convert_to_RGB(cur,0)) 
     ax[2].axis('off')
-    ax[2].set_title("L: lightness")
+    ax[2].set_title("L: lightness B/W")
 
     ax[3].imshow(extract_single_dim_from_LAB_convert_to_RGB(cur,1)) 
     ax[3].axis('off')
