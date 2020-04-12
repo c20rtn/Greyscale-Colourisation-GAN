@@ -34,7 +34,7 @@ EPOCHS = 500
 
 # Get images
 image = img_to_array(load_img(DATA_PATH))
-image = np.array(image, dtype=float)
+image = np.array(image, dtype=np.uint8)
 testimages = glob.glob(TEST_PATH)
 
 X = rgb2lab(1.0/255*image)[:,:,0]
@@ -128,7 +128,8 @@ for img in testimages:
     ax[4].axis('off')
     ax[4].set_title("B: blue to yellow")
 
-    plt.show()
+    # plt.show()
+    plt.savefig(timestr+os.path.basename(img)+'.png')
 
 # imsave("result\\alpha\\"+"img_result.png"+timestr+".png", lab2rgb(cur))
 # imsave("result\\alpha\\"+"img_gray_version.png"+timestr+".png", rgb2gray(lab2rgb(cur)))

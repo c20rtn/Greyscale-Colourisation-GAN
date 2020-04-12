@@ -30,7 +30,7 @@ session = InteractiveSession(config=config)
 
 DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\coast\\*.jpg'
 TEST_PATH  = 'test\\*.jpg'
-EPOCHS = 100
+EPOCHS = 30
 BATCH_SIZE = 16
 EPOCH_STEPS = 16
 
@@ -40,7 +40,7 @@ X = []
 files = glob.glob(DATA_PATH)
 for filename in files:
     X.append(img_to_array(load_img(filename)))
-X = np.array(X, dtype=float)
+X = np.array(X, dtype=np.uint8)
 
 print("\nData", X.shape)
 
@@ -106,7 +106,6 @@ print(model.evaluate(Xtest, Ytest, batch_size=BATCH_SIZE))
 for img in testimages:
     testimage = img_to_array(load_img(img))
     testimage = rgb2lab(1.0/255*testimage)[:,:,0]
-    testimage = testimage.reshape(1, 256, 256, 1)
 
     output = model.predict(testimage)
     output *= 128
@@ -126,7 +125,7 @@ for img in testimages:
     timestr = time.strftime("%Y%m%d-%H%M%S")
 
     cur = np.zeros((256, 256, 3))
-    cur[:,:,0] = testimage[0][:,:,0]
+    cur[:,:,0] = testimage[0]
     cur[:,:,1:] = output[0]
 
     def extract_single_dim_from_LAB_convert_to_RGB(image,idim):
