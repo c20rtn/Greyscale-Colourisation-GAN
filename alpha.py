@@ -30,106 +30,117 @@ session = InteractiveSession(config=config)
 
 DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\coast\\n203015.jpg'
 TEST_PATH  = 'test\\*.jpg'
-EPOCHS = 500
+EPOCHS = 1000
 
 # Get images
-image = img_to_array(load_img(DATA_PATH))
-image = np.array(image, dtype=np.uint8)
-testimages = glob.glob(TEST_PATH)
+def get_images():
+    image = img_to_array(load_img(DATA_PATH))
+    image = np.array(image, dtype=np.uint8)
+    testimages = glob.glob(TEST_PATH)
 
-X = rgb2lab(1.0/255*image)[:,:,0]
-Y = rgb2lab(1.0/255*image)[:,:,1:]
-Y /= 128
-X = X.reshape(1, 256, 256, 1)
-Y = Y.reshape(1, 256, 256, 2)
+    X = rgb2lab(1.0/255*image)[:,:,0]
+    Y = rgb2lab(1.0/255*image)[:,:,1:]
+    Y /= 128
+    X = X.reshape(1, 256, 256, 1)
+    Y = Y.reshape(1, 256, 256, 2)
+    
+    return X, Y, testimages
 
-# Building the neural network
-model = k.Sequential()
-model.add(InputLayer(input_shape=(None, None, 1)))
-model.add(Conv2D(8, (3, 3), activation='relu', padding='same', strides=2))
-model.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
-model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
-model.add(Conv2D(16, (3, 3), activation='relu', padding='same', strides=2))
-model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
-model.add(Conv2D(32, (3, 3), activation='relu', padding='same', strides=2))
-model.add(UpSampling2D((2, 2)))
-model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
-model.add(UpSampling2D((2, 2)))
-model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
-model.add(UpSampling2D((2, 2)))
-model.add(Conv2D(2, (3, 3), activation='tanh', padding='same'))
+def create_generator():
+    # Building the neural network
+    model = k.Sequential()
+    model.add(InputLayer(input_shape=(None, None, 1)))
+    model.add(Conv2D(8, (3, 3), activation='relu', padding='same', strides=2))
+    model.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
+    model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
+    model.add(Conv2D(16, (3, 3), activation='relu', padding='same', strides=2))
+    model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+    model.add(Conv2D(32, (3, 3), activation='relu', padding='same', strides=2))
+    model.add(UpSampling2D((2, 2)))
+    model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+    model.add(UpSampling2D((2, 2)))
+    model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
+    model.add(UpSampling2D((2, 2)))
+    model.add(Conv2D(2, (3, 3), activation='tanh', padding='same'))
 
-# Finish model
-model.compile(optimizer='rmsprop',loss='mse')
+    # Finish model
+    model.compile(optimizer='rmsprop',loss='mse')
 
-model.fit(x=X, 
-    y=Y,
-    batch_size=1,
-    epochs=EPOCHS)
+def train_gen(model, X, Y):
+    model.fit(x=X, 
+        y=Y,
+        batch_size=1,
+        epochs=EPOCHS)
+    print(model.evaluate(X, Y, batch_size=1))
+    return model
 
-print(model.evaluate(X, Y, batch_size=1))
+def output_colourisations(model, testimages):
+    count = 0
+    for img in testimages:
+        count = count + 1
+        testimage = img_to_array(load_img(img))
+        testimage = rgb2lab(1.0/255*testimage)[:,:,0]
+        testimage = testimage.reshape(1, 256, 256, 1)
 
-for img in testimages:
-    testimage = img_to_array(load_img(img))
-    testimage = rgb2lab(1.0/255*testimage)[:,:,0]
-    testimage = testimage.reshape(1, 256, 256, 1)
+        output = model.predict(testimage)
+        output *= 128
 
-    output = model.predict(testimage)
-    output *= 128
+        print("\nShow colorizations")
 
-    print("\nShow colorizations")
+        L_layer = testimage[:,:,:,0]
+        A_layer = output[:,:,:,0]
+        B_layer = output[:,:,:,1]
+        print("\nL_layer", L_layer.shape)
+        print("\nA_layer", A_layer.shape)
+        print("\nB_layer", B_layer.shape)
 
-    L_layer = testimage[:,:,:,0]
-    A_layer = output[:,:,:,0]
-    B_layer = output[:,:,:,1]
-    print("\nL_layer", L_layer.shape)
-    print("\nA_layer", A_layer.shape)
-    print("\nB_layer", B_layer.shape)
+        # Output colorizations
+        print("\nOutput colorizations")
 
-    # Output colorizations
-    print("\nOutput colorizations")
+        timestr = time.strftime("%Y%m%d-%H%M%S")
 
-    timestr = time.strftime("%Y%m%d-%H%M%S")
+        cur = np.zeros((256, 256, 3))
+        cur[:,:,0] = testimage[0][:,:,0]
+        cur[:,:,1:] = output[0]
 
-    cur = np.zeros((256, 256, 3))
-    cur[:,:,0] = testimage[0][:,:,0]
-    cur[:,:,1:] = output[0]
+        def extract_single_dim_from_LAB_convert_to_RGB(image,idim):
+            '''
+            image is a single lab image of shape (None,None,3)
+            '''
+            z = np.zeros(image.shape)
+            if idim != 0 :
+                z[:,:,0]=80 ## I need brightness to plot the image along 1st or 2nd axis
+            z[:,:,idim] = image[:,:,idim]
+            z = lab2rgb(z)
+            return(z)
 
-    def extract_single_dim_from_LAB_convert_to_RGB(image,idim):
-        '''
-        image is a single lab image of shape (None,None,3)
-        '''
-        z = np.zeros(image.shape)
-        if idim != 0 :
-            z[:,:,0]=80 ## I need brightness to plot the image along 1st or 2nd axis
-        z[:,:,idim] = image[:,:,idim]
-        z = lab2rgb(z)
-        return(z)
+        fig, ax = plt.subplots(1, 5, figsize = (16, 6))
 
-    fig, ax = plt.subplots(1, 5, figsize = (16, 6))
+        ax[0].imshow(mpimg.imread(img)) 
+        ax[0].axis('off')
+        ax[0].set_title('Original')
 
-    ax[0].imshow(mpimg.imread(img)) 
-    ax[0].axis('off')
-    ax[0].set_title('Original')
+        ax[1].imshow(lab2rgb(cur)) 
+        ax[1].axis('off')
+        ax[1].set_title('Lab scaled')
 
-    ax[1].imshow(lab2rgb(cur)) 
-    ax[1].axis('off')
-    ax[1].set_title('Lab scaled')
+        ax[2].imshow(extract_single_dim_from_LAB_convert_to_RGB(cur,0)) 
+        ax[2].axis('off')
+        ax[2].set_title("L: lightness")
 
-    ax[2].imshow(extract_single_dim_from_LAB_convert_to_RGB(cur,0)) 
-    ax[2].axis('off')
-    ax[2].set_title("L: lightness")
+        ax[3].imshow(extract_single_dim_from_LAB_convert_to_RGB(cur,1)) 
+        ax[3].axis('off')
+        ax[3].set_title("A: green to red")
 
-    ax[3].imshow(extract_single_dim_from_LAB_convert_to_RGB(cur,1)) 
-    ax[3].axis('off')
-    ax[3].set_title("A: green to red")
+        ax[4].imshow(extract_single_dim_from_LAB_convert_to_RGB(cur,2)) 
+        ax[4].axis('off')
+        ax[4].set_title("B: blue to yellow")
 
-    ax[4].imshow(extract_single_dim_from_LAB_convert_to_RGB(cur,2)) 
-    ax[4].axis('off')
-    ax[4].set_title("B: blue to yellow")
+        plt.show()
+        # fig.tight_layout()
+        # plt.savefig('first-result-'+str(count)+'.png', bbox_inches='tight')
 
-    # plt.show()
-    plt.savefig(timestr+os.path.basename(img)+'.png')
-
-# imsave("result\\alpha\\"+"img_result.png"+timestr+".png", lab2rgb(cur))
-# imsave("result\\alpha\\"+"img_gray_version.png"+timestr+".png", rgb2gray(lab2rgb(cur)))
+X, Y, testimages = get_images()
+gen = create_generator()
+gen = train_gen(gen, X, Y)
+output_colourisations(gen, testimages)

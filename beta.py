@@ -103,11 +103,13 @@ Ytest = rgb2lab(1.0/255*X[split:])[:,:,:,1:]
 Ytest = Ytest / 128
 print(model.evaluate(Xtest, Ytest, batch_size=BATCH_SIZE))
 
+count = 0
 for img in testimages:
+    count = count + 1
     testimage = img_to_array(load_img(img))
     testimage = rgb2lab(1.0/255*testimage)[:,:,0]
 
-    output = model.predict(testimage)
+    output = model.predict(testimage) 
     output *= 128
 
     print("\nShow colorizations")
@@ -137,7 +139,7 @@ for img in testimages:
             z[:,:,0]=80 ## I need brightness to plot the image along 1st or 2nd axis
         z[:,:,idim] = image[:,:,idim]
         z = lab2rgb(z)
-        return(z)
+        return(z) 
 
     fig, ax = plt.subplots(1, 5, figsize = (16, 6))
 
@@ -162,6 +164,8 @@ for img in testimages:
     ax[4].set_title("B: blue to yellow")
 
     plt.show()
+    fig.tight_layout()
+    plt.savefig('second-result-'+str(count)+'.png', bbox_inches='tight')
 
 # imsave("result\\alpha\\"+"img_result.png"+timestr+".png", lab2rgb(cur))
 # imsave("result\\alpha\\"+"img_gray_version.png"+timestr+".png", rgb2gray(lab2rgb(cur)))

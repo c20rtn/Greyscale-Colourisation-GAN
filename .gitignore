@@ -1,0 +1,4 @@
+*.png
+*.v2
+output/
+training_checkpoints/

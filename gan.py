@@ -145,7 +145,6 @@ def train_test_LAB_values(X_train, X_test):
     print("X_test_L shape : ", X_test_L.shape)
     print("X_train_AB shape : ", X_train_AB.shape)
     print("X_test_AB shape : ", X_test_AB.shape)
-    print("SPLIT shape : ", X_test_AB[0:20].shape)
     return X_train_L, X_test_L, X_train_AB, X_test_AB
 
 def make_image(grayscale, generated):
@@ -209,12 +208,13 @@ def train(dataset, epochs):
     for epoch in range(epochs):
         start = time.time()
 
-        image_batch = dataset[epoch*D_STEPS:(epoch*D_STEPS)+D_STEPS]
+        for i in range(50):
+            image_batch = dataset[(i*D_STEPS):(i*D_STEPS)+D_STEPS]
+            train_step(image_batch)
 
         # for image_batch in dataset:
         #     train_step(image_batch)
-            
-        train_step(image_batch)
+        
 
         # Produce images for the GIF as we go
         # display.clear_output(wait=True)
