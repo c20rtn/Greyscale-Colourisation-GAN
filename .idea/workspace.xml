@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="62a45d92-a317-4b73-8696-bf53ed82c662" name="Default Changelist" comment="" />
+    <list default="true" id="62a45d92-a317-4b73-8696-bf53ed82c662" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/tf_train.py" beforeDir="false" afterPath="$PROJECT_DIR$/tf_train.py" afterDir="false" />
+    </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -14,6 +16,7 @@
   <component name="ProjectId" id="1WqciTfd2nCdZ4uyWYor6aPqEz5" />
   <component name="PropertiesComponent">
     <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../../ML" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.detected.package.tslint" value="true" />
     <property name="node.js.path.for.package.eslint" value="project" />
@@ -100,6 +103,7 @@
       <workItem from="1579881373975" duration="7856000" />
       <workItem from="1581254737600" duration="68000" />
       <workItem from="1581254836277" duration="212000" />
+      <workItem from="1584899261948" duration="124000" />
     </task>
     <servers />
   </component>
