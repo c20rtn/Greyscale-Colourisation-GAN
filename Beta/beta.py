@@ -28,15 +28,15 @@ config = ConfigProto()
 config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
 
-DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\coast\\*.jpg'
-TEST_PATH  = 'test\\*.jpg'
-EPOCHS = 1
+# DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\*\\*.jpg'
+DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\beach\\*.jpg'
+TEST_PATH  = '.\\Beta\\test\\*.jpg'
+EPOCHS = 200
 BATCH_SIZE = 16
 EPOCH_STEPS = 16
-SPLIT = 0.95
 
 def get_images():
-    testimages = glob.glob(TEST_PATH)
+    print("\nGetting Images")
     X = []
     files = glob.glob(DATA_PATH)
     for filename in files:
@@ -44,7 +44,46 @@ def get_images():
     X = np.array(X, dtype=np.uint8)
     print("\nData", X.shape)
     
-    return X, testimages
+    T = glob.glob(TEST_PATH)
+    # labels = np.array([os.path.basename(os.path.dirname(image)) for image in files])
+    # unique_labels = np.unique(labels).tolist()
+    # print(unique_labels)
+    # y = labels
+    # y = np.array(list(map(lambda x: unique_labels.index(x), labels)))
+    # print(np.unique(y))
+    
+    return dataset2lab(X),T
+
+def train_test_LAB_values(X_train):
+    print("\nSplitting the L* layer")
+    X_train_L = X_train[:,:,:,0]
+    X_train_L = np.expand_dims(X_train_L, axis=-1)
+
+    print("Splitting the A*B* layers\n")
+    X_train_AB = X_train[:,:,:,1:] 
+    
+    print("X_train_L shape : ", X_train_L.shape)
+    print("X_train_AB shape : ", X_train_AB.shape)
+    return X_train_L, X_train_AB
+
+def dataset2lab(data):
+    print("Splitting the A*B* layers\n")
+    dataset = data.astype(np.float)
+    for i in range(dataset.shape[0]):
+        if(i % 500 == 0):
+            print("File ",i)
+        dataset[i] = rgb2lab(dataset[i]/255.0)
+    return dataset
+
+def get_test_image():
+    testimages = glob.glob(TEST_PATH)
+    testimage = img_to_array(load_img(testimages[0]))
+    testimage = rgb2lab(1.0/255*testimage)[:,:,0]
+    testimage = np.expand_dims(testimage, axis=0)
+    testimage = np.expand_dims(testimage, axis=-1)
+    # testimage = testimage.reshape(256, 256, 1)
+    print("Test image -",testimage.shape)
+    return testimage
 
 def create_gen():
     print("\nCreating Model")
@@ -69,34 +108,7 @@ def create_gen():
     
     return model
 
-def test_train():
-    print("\nSet up train and test data")
-    # Set up train and test data
-    split = int(SPLIT*len(X))
-    Xtrain = X[:split]
-    Xtrain = 1.0/255*Xtrain
-    print("\nXtrain", Xtrain.shape)
-    
-    return Xtrain, split
-
-def test_images(split, X, model):
-    print("\nTest images")
-    # Test images
-    Xtest = rgb2lab(1.0/255*X[split:])[:,:,:,0]
-    Xtest = Xtest.reshape(Xtest.shape+(1,))
-    Ytest = rgb2lab(1.0/255*X[split:])[:,:,:,1:]
-    Ytest = Ytest / 128
-    print(model.evaluate(Xtest, Ytest, batch_size=BATCH_SIZE))
-
-# Generate training data
-def image_a_b_gen(datagen, batch_size):
-    for batch in datagen.flow(Xtrain, batch_size=batch_size):
-        lab_batch = rgb2lab(batch)
-        X_batch = lab_batch[:,:,:,0]
-        Y_batch = lab_batch[:,:,:,1:] / 128
-        yield (X_batch.reshape(X_batch.shape+(1,)), Y_batch)
-
-def fit_gen(model):
+def fit_gen(model, X_l, X_ab):
     print("\nImage transformer")
     # Image transformer
     datagen = ImageDataGenerator(
@@ -112,7 +124,15 @@ def fit_gen(model):
     tensorboard = TensorBoard(log_dir="output\\first_run")
 
     print("\nfit_generator")
-    model.fit_generator(image_a_b_gen(datagen, BATCH_SIZE), callbacks=[tensorboard], epochs=EPOCHS, steps_per_epoch=EPOCH_STEPS)
+    for epoch in range(EPOCHS):
+        start = time.time()
+        
+        model.fit(x=X_l, 
+                y=X_ab,
+                batch_size=BATCH_SIZE,
+                epochs=1)
+
+        print ('\nTime for epoch {} is {} sec'.format(epoch + 1, time.time()-start))
     
     return model
 
@@ -141,7 +161,7 @@ def output_colourisations(model, testimages):
 
         timestr = time.strftime("%Y%m%d-%H%M%S")
 
-        cur = np.zeros((256, 256, 3))
+        cur = np.zeros((256, 256, 3), dtype=np.float)
         cur[:,:,0] = testimage[0][:,:,0]
         cur[:,:,1:] = output[0]
 
@@ -183,10 +203,15 @@ def output_colourisations(model, testimages):
         # plt.savefig('first-result-'+str(count)+'.png', bbox_inches='tight')
 
 X, testimages = get_images()
-gen = create_gen()
-Xtrain, split = test_train()
-gen = fit_gen(gen)
+# data = dataset2lab(X)
 
-test_images(split, X, gen)
+X_train_L, X_train_AB = train_test_LAB_values(X)
+
+del X
+
+gen = create_gen()
+gen = fit_gen(gen, X_train_L, X_train_AB)
 
 output_colourisations(gen, testimages)
+
+# gen.save('.\\Beta\\Models\\beta.h5')
