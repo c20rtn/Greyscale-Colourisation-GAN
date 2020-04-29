@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from matplotlib.image import imread
 import matplotlib.image as mpimg
 import tensorflow as tf
+import tensorflowjs as tfjs
 import tensorflow.keras as k
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
@@ -29,7 +30,7 @@ config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
 
 DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\coast\\n203015.jpg'
-TEST_PATH  = 'test\\*.jpg'
+TEST_PATH  = '.\\Alpha\\test\\*.jpg'
 EPOCHS = 1000
 
 # Get images
@@ -44,6 +45,9 @@ def get_images():
     X = X.reshape(1, 256, 256, 1)
     Y = Y.reshape(1, 256, 256, 2)
     
+    print("X size - ", X.shape)
+    print("Y size - ", Y.shape)
+    print("test images size - ", len(T), " - ", T[0])
     return X, Y, T
 
 def create_generator():
@@ -77,7 +81,6 @@ def train_gen(model, X, Y):
 
 def output_colourisations(model, test):
     count = 0
-    print("test images size - ", len(test))
     for img in test:
         print(img)
         count = count + 1
@@ -143,7 +146,11 @@ def output_colourisations(model, test):
         # fig.tight_layout()
         # plt.savefig('first-result-'+str(count)+'.png', bbox_inches='tight')
 
+print("\n\n\n",tf.__version__,"\n\n\n")
 X, Y, testimages = get_images()
 gen = create_generator()
 gen = train_gen(gen, X, Y)
 output_colourisations(gen, testimages)
+
+tfjs.converters.save_keras_model(gen, '.\\Alpha\\Models\\JS')
+# gen.save()
