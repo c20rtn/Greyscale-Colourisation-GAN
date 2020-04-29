@@ -48,6 +48,7 @@ def get_images():
     X = np.array(X, dtype=np.uint8)
     print("\nData", X.shape)
     
+    T = glob.glob(TEST_PATH)
     # labels = np.array([os.path.basename(os.path.dirname(image)) for image in files])
     # unique_labels = np.unique(labels).tolist()
     # print(unique_labels)
