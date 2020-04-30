@@ -1,0 +1,7 @@
+@import url('https://fonts.googleapis.com/css?family=Rajdhani&display=swap');
+html, body{
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif, sans-serif;
+    background-color: whitesmoke;
+    color: #353535;
+    padding: 20px;
+}
