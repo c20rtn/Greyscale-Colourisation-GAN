@@ -14,36 +14,96 @@
         <!-- Import tfjs-vis -->
         <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis@1.0.2/dist/tfjs-vis.umd.min.js"></script>
         <script type="module" src="Scripts/site.js"></script>
+        <script src="Scripts/jquery-3.5.0.min.js"></script>
     </head>
 
     <body>
-        <button onclick="learn()">Click me</button>
-        <div id="foo"></div>
+
+        <form action="#" method="GET" role="form" enctype="multipart/form-data">
+            <input type="file" onChange="show_image(this);" name="img" multiple>
+            <button type="submit">Submit </button>
+        </form>
+        <img id="foo"></img>
+        <h3>Canvas</h3>
+        <canvas id="canvas" width="512" height="256"></canvas> <!-- change with real sizes -->
+
         <script>
             console.log('Hello TensorFlow');
             console.log(tf.version);
+
+            $("form").submit(function (event) {
+                get_layers();
+            });
+
+            // function getText(){
+            //     // read text from URL location
+            //     var request = new XMLHttpRequest();
+            //     request.open('GET', 'https://raw.githubusercontent.com/c20rtn/Greyscale-Colourisation-GAN/master/Alpha/l-layer.json', true);
+            //     request.send(null);
+            //     request.onreadystatechange = function () {
+            //         if (request.readyState === 4 && request.status === 200) {
+            //             var type = request.getResponseHeader('Content-Type');
+            //             if (type.indexOf("text") !== 1) {
+            //                 document.getElementById('foo').innerText = request.responseText;
+            //                 return request.responseText;
+            //             }
+            //         }
+            //     }
+            // }
+
+            async function get_layers(){
+                canvas = document.querySelector("#canvas");
+
+                ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0);
+
+                var imgData = ctx.getImageData(x, y, width, height).data;
+                return imgData;
+            }
+
+            function show_image(obj){
+                if (FileReader)
+                {
+                    var reader = new FileReader();
+                    reader.readAsDataURL(obj.files[0]);
+                    reader.onload = function (e) {
+                        var image=new Image();
+                        image.src=e.target.result;
+                        image.onload = function () {
+                            document.getElementById("foo").src=image.src;
+                            canvas = document.querySelector("#canvas");
+
+                            ctx = canvas.getContext("2d");
+                            ctx.drawImage(image, 0, 0);
+
+                            
+                            var imgData = ctx.getImageData(0, 0, 256, 256).data;
+
+                            console.log(imgData[0])
+                            console.log(imgData[1])
+                            console.log(imgData[2])
+                            console.log(imgData[3])
+
+                            ctx.drawImage(image, 256, 0);
+                        };
+                    }
+                }
+                else
+                {
+                    alert("boo boo")
+                }
+            }
+
 
             async function learn(){
                 const model = await tf.loadLayersModel('https://raw.githubusercontent.com/c20rtn/Greyscale-Colourisation-GAN/master/Alpha/Models/JS/model.json');
 
                 model.summary()
 
-                // const model = tf.sequential();
-                
-                // model.add(tf.layers.dense({units: 1, inputShape: [1]}));
+                var input = getText()
 
-                // model.compile({
-                //     loss: 'meanSquaredError',
-                //     optimizer: 'sgd'
-                // });
-
-                // const xs =  tf.tensor2d([-1,0,1,2,3,4],[6,1]);
-                // const ys =  tf.tensor2d([-3,-1,1,3,5,7],[6,1]);
-
-                // await model.fit(xs,ys,{epochs:250})
-
-                // document.getElementById('foo').innerText = 
-                //     model.predict(tf.tensor2d([20], [1,1]));
+                document.getElementById('foo').innerText = 
+                    model.predict(tf.tensor2d([20], [1,1]));
             }
         </script>
     </body>
