@@ -18,22 +18,14 @@
     </head>
 
     <body>
-
-        <form action="#" method="GET" role="form" enctype="multipart/form-data">
-            <input type="file" onChange="show_image(this);" name="img" multiple>
-            <button type="submit">Submit </button>
-        </form>
+        <input type="file" onChange="show_image(this);" name="img" multiple>
         <img id="foo"></img>
         <h3>Canvas</h3>
-        <canvas id="canvas" width="512" height="256"></canvas> <!-- change with real sizes -->
+        <canvas id="canvas" width="512" height="256"></canvas>
 
         <script>
             console.log('Hello TensorFlow');
             console.log(tf.version);
-
-            $("form").submit(function (event) {
-                get_layers();
-            });
 
             // function getText(){
             //     // read text from URL location
@@ -78,13 +70,37 @@
 
                             
                             var imgData = ctx.getImageData(0, 0, 256, 256).data;
+                            console.log(typeof imgData);
+                            console.log(typeof imgData[0]);
 
-                            console.log(imgData[0])
-                            console.log(imgData[1])
-                            console.log(imgData[2])
-                            console.log(imgData[3])
+                            console.log("imgData - " + imgData[0])
+                            console.log("imgData - " + imgData[1])
+                            console.log("imgData - " + imgData[2])
+                            console.log("imgData - " + imgData[3])
+                            console.log("imgData - " + imgData[4])
 
-                            ctx.drawImage(image, 256, 0);
+                            //alter image data
+                            //remove A value from RGBA
+                            var len = imgData.length;
+                            var RGB = []
+                            console.log("imgData length - " + len);
+                            
+                            for (i = 0; i < len; i++) {
+                                if ((i+1) % 4 !== 0) {
+                                    RGB.push(imgData[i]);
+                                }
+                            }
+                            console.log("RGB - " + RGB[0])
+                            console.log("RGB - " + RGB[1])
+                            console.log("RGB - " + RGB[2])
+                            console.log("RGB - " + RGB[3])
+                            console.log("RGB - " + RGB[4])
+                            
+
+                            //convert to L*A*B*
+                            var RGBlen = imgData.length;
+                            var LAB = []
+                            //ctx.drawImage(image, 256, 0);
                         };
                     }
                 }
@@ -92,6 +108,51 @@
                 {
                     alert("boo boo")
                 }
+            }
+
+            function lab2rgb(lab){
+                var y = (lab[0] + 16) / 116,
+                    x = lab[1] / 500 + y,
+                    z = y - lab[2] / 200,
+                    r, g, b;
+
+                x = 0.95047 * ((x * x * x > 0.008856) ? x * x * x : (x - 16/116) / 7.787);
+                y = 1.00000 * ((y * y * y > 0.008856) ? y * y * y : (y - 16/116) / 7.787);
+                z = 1.08883 * ((z * z * z > 0.008856) ? z * z * z : (z - 16/116) / 7.787);
+
+                r = x *  3.2406 + y * -1.5372 + z * -0.4986;
+                g = x * -0.9689 + y *  1.8758 + z *  0.0415;
+                b = x *  0.0557 + y * -0.2040 + z *  1.0570;
+
+                r = (r > 0.0031308) ? (1.055 * Math.pow(r, 1/2.4) - 0.055) : 12.92 * r;
+                g = (g > 0.0031308) ? (1.055 * Math.pow(g, 1/2.4) - 0.055) : 12.92 * g;
+                b = (b > 0.0031308) ? (1.055 * Math.pow(b, 1/2.4) - 0.055) : 12.92 * b;
+
+                return [Math.round(Math.max(0, Math.min(1, r)) * 255), 
+                        Math.round(Math.max(0, Math.min(1, g)) * 255), 
+                        Math.round(Math.max(0, Math.min(1, b)) * 255)]
+            }
+
+
+            function rgb2lab(rgb){
+                var r = rgb[0] / 255,
+                    g = rgb[1] / 255,
+                    b = rgb[2] / 255,
+                    x, y, z;
+
+                r = (r > 0.04045) ? Math.pow((r + 0.055) / 1.055, 2.4) : r / 12.92;
+                g = (g > 0.04045) ? Math.pow((g + 0.055) / 1.055, 2.4) : g / 12.92;
+                b = (b > 0.04045) ? Math.pow((b + 0.055) / 1.055, 2.4) : b / 12.92;
+
+                x = (r * 0.4124 + g * 0.3576 + b * 0.1805) / 0.95047;
+                y = (r * 0.2126 + g * 0.7152 + b * 0.0722) / 1.00000;
+                z = (r * 0.0193 + g * 0.1192 + b * 0.9505) / 1.08883;
+
+                x = (x > 0.008856) ? Math.pow(x, 1/3) : (7.787 * x) + 16/116;
+                y = (y > 0.008856) ? Math.pow(y, 1/3) : (7.787 * y) + 16/116;
+                z = (z > 0.008856) ? Math.pow(z, 1/3) : (7.787 * z) + 16/116;
+
+                return [(116 * y) - 16, 500 * (x - y), 200 * (y - z)]
             }
 
 
