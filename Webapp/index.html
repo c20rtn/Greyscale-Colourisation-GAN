@@ -19,41 +19,13 @@
 
     <body>
         <input type="file" onChange="show_image(this);" name="img" multiple>
-        <img id="foo"></img>
         <h3>Canvas</h3>
-        <canvas id="canvas" width="512" height="256"></canvas>
+        <canvas id="canvas" width="512" height="512"></canvas>
 
         <script>
             console.log('Hello TensorFlow');
             console.log(tf.version);
-
-            // function getText(){
-            //     // read text from URL location
-            //     var request = new XMLHttpRequest();
-            //     request.open('GET', 'https://raw.githubusercontent.com/c20rtn/Greyscale-Colourisation-GAN/master/Alpha/l-layer.json', true);
-            //     request.send(null);
-            //     request.onreadystatechange = function () {
-            //         if (request.readyState === 4 && request.status === 200) {
-            //             var type = request.getResponseHeader('Content-Type');
-            //             if (type.indexOf("text") !== 1) {
-            //                 document.getElementById('foo').innerText = request.responseText;
-            //                 return request.responseText;
-            //             }
-            //         }
-            //     }
-            // }
-
-            async function get_layers(){
-                canvas = document.querySelector("#canvas");
-
-                ctx = canvas.getContext("2d");
-                ctx.drawImage(img, 0, 0);
-
-                var imgData = ctx.getImageData(x, y, width, height).data;
-                return imgData;
-            }
-
-            function show_image(obj){
+            async function show_image(obj){
                 if (FileReader)
                 {
                     var reader = new FileReader();
@@ -61,22 +33,14 @@
                     reader.onload = function (e) {
                         var image=new Image();
                         image.src=e.target.result;
-                        image.onload = function () {
-                            document.getElementById("foo").src=image.src;
+                        image.onload = async function () {
                             canvas = document.querySelector("#canvas");
 
                             ctx = canvas.getContext("2d");
                             ctx.drawImage(image, 0, 0);
 
-                            
+                            //get data from image
                             var imgData = ctx.getImageData(0, 0, 256, 256).data;
-                            console.log(typeof imgData);
-                            console.log(typeof imgData[0]);
-
-                            console.log("imgData - " + imgData[0])
-                            console.log("imgData - " + imgData[1])
-                            console.log("imgData - " + imgData[2])
-                            console.log("imgData - " + imgData[3])
                             console.log("imgData - " + imgData[4])
 
                             //alter image data
@@ -85,22 +49,59 @@
                             var RGB = []
                             console.log("imgData length - " + len);
                             
+                            //get RGB data
                             for (i = 0; i < len; i++) {
                                 if ((i+1) % 4 !== 0) {
                                     RGB.push(imgData[i]);
                                 }
                             }
-                            console.log("RGB - " + RGB[0])
-                            console.log("RGB - " + RGB[1])
-                            console.log("RGB - " + RGB[2])
-                            console.log("RGB - " + RGB[3])
-                            console.log("RGB - " + RGB[4])
+                            console.log("RGB length - " + RGB.length);
                             
 
                             //convert to L*A*B*
-                            var RGBlen = imgData.length;
-                            var LAB = []
-                            //ctx.drawImage(image, 256, 0);
+                            var RGBlen = RGB.length;
+                            var LAB = [];
+                            var L_layer = [];
+
+                            for (i = 0; i < RGBlen; i+=3) {
+                                LAB.push(rgb2lab([RGB[i], RGB[i+1], RGB[i+2]]));
+                                L_layer.push(LAB[LAB.length - 1][0]);
+                            }
+
+                            //get output
+                            var AB = await learn(L_layer);
+                            var L_len = L_layer.length;
+                            var output = [];
+
+                            //convert LAB to RGB
+                            console.log("LAB - " + L_layer[0] + ", " + AB[(0)] + ", " + AB[1]);
+                            for (i = 0; i < L_len; i++) {
+                                //RGB image
+                                output.push(lab2rgb([L_layer[i], AB[(i*2)], AB[(i*2)+1]]));
+                            }
+                            console.log("output length - " + output.length);
+
+                            //output in canvas
+                            var width = 256,
+                                height = 256,
+                                buffer = new Uint8ClampedArray(width * height * 4); // have enough bytes
+
+                            var bufflen = width * height;
+                            for(var i = 0; i < bufflen; i++) {
+                                buffer[(i*4)] = output[(i*3)+0];
+                                buffer[(i*4)+1] = output[(i*3)+1];
+                                buffer[(i*4)+2] = output[(i*3)+2];
+                                buffer[(i*4)+3] = 255;
+                            }
+
+                            // create imageData object
+                            var idata = ctx.createImageData(width, height);
+
+                            // set our buffer as source
+                            idata.data.set(buffer);
+
+                            // update canvas with new data
+                            ctx.putImageData(idata, 256, 256);
                         };
                     }
                 }
@@ -108,6 +109,21 @@
                 {
                     alert("boo boo")
                 }
+            }
+
+            async function learn(input){
+                try {
+                    model = await tf.loadLayersModel('https://raw.githubusercontent.com/c20rtn/Greyscale-Colourisation-GAN/master/Alpha/Models/JS/model.json');
+                } catch(e) {
+                    console.log("the model could not be loaded");
+                }
+                model.summary()
+
+                let output = model.predict(tf.tensor4d(input, [1, 256, 256, 1]));
+                let values = output.dataSync();
+                let arr = Array.from(values);
+
+                return arr;
             }
 
             function lab2rgb(lab){
@@ -156,16 +172,6 @@
             }
 
 
-            async function learn(){
-                const model = await tf.loadLayersModel('https://raw.githubusercontent.com/c20rtn/Greyscale-Colourisation-GAN/master/Alpha/Models/JS/model.json');
-
-                model.summary()
-
-                var input = getText()
-
-                document.getElementById('foo').innerText = 
-                    model.predict(tf.tensor2d([20], [1,1]));
-            }
         </script>
     </body>
 </html>
