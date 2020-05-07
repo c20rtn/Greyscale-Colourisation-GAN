@@ -113,7 +113,7 @@
             }
 
             async function learn(input){
-                const model = await tf.loadLayersModel('http://127.0.0.1:8080/Models/model.json');
+                const model = await tf.loadLayersModel('https://raw.githubusercontent.com/c20rtn/Greyscale-Colourisation-GAN/master/Alpha/Models/jsmodel/model.json');
                 model.summary()
                 console.log("weights - " + model.layers[0].getWeights().length)
 
