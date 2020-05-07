@@ -8,12 +8,10 @@
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
         
                     
-        <title>TensorFlow.js Tutorial</title>
+        <title>Image Colourisation</title>
         <!-- Import TensorFlow.js -->
-        <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.0.0/dist/tf.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"> </script>
         <!-- Import tfjs-vis -->
-        <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis@1.0.2/dist/tfjs-vis.umd.min.js"></script>
-        <script type="module" src="Scripts/site.js"></script>
         <script src="Scripts/jquery-3.5.0.min.js"></script>
     </head>
 
@@ -25,6 +23,7 @@
         <script>
             console.log('Hello TensorFlow');
             console.log(tf.version);
+
             async function show_image(obj){
                 if (FileReader)
                 {
@@ -41,13 +40,11 @@
 
                             //get data from image
                             var imgData = ctx.getImageData(0, 0, 256, 256).data;
-                            console.log("imgData - " + imgData[4])
 
                             //alter image data
                             //remove A value from RGBA
                             var len = imgData.length;
                             var RGB = []
-                            console.log("imgData length - " + len);
                             
                             //get RGB data
                             for (i = 0; i < len; i++) {
@@ -55,7 +52,6 @@
                                     RGB.push(imgData[i]);
                                 }
                             }
-                            console.log("RGB length - " + RGB.length);
                             
 
                             //convert to L*A*B*
@@ -74,12 +70,17 @@
                             var output = [];
 
                             //convert LAB to RGB
+                            console.log("Test image RGB  [[[222. 231. 248.]");
+                            console.log("Test image LAB  [[[ 91.4410478    0.2373309   -9.24941604]");
+                            console.log("Output image LAB Guess (OG MODEL)  [[[[ 91.4410478  6.2803063 -43.889267 ]");
                             console.log("LAB - " + L_layer[0] + ", " + AB[(0)] + ", " + AB[1]);
+
                             for (i = 0; i < L_len; i++) {
                                 //RGB image
-                                output.push(lab2rgb([L_layer[i], AB[(i*2)], AB[(i*2)+1]]));
+                                output.push(lab2rgb([L_layer[i], AB[(i*2)]*128, AB[(i*2)+1]*128]));
                             }
                             console.log("output length - " + output.length);
+                            output = output.flat();
 
                             //output in canvas
                             var width = 256,
@@ -112,16 +113,17 @@
             }
 
             async function learn(input){
-                try {
-                    model = await tf.loadLayersModel('https://raw.githubusercontent.com/c20rtn/Greyscale-Colourisation-GAN/master/Alpha/Models/JS/model.json');
-                } catch(e) {
-                    console.log("the model could not be loaded");
-                }
+                const model = await tf.loadLayersModel('http://127.0.0.1:8080/Models/model.json');
                 model.summary()
+                console.log("weights - " + model.layers[0].getWeights().length)
+
+                console.log("Input - " + input.length)
 
                 let output = model.predict(tf.tensor4d(input, [1, 256, 256, 1]));
                 let values = output.dataSync();
                 let arr = Array.from(values);
+
+                console.log("Output - " + arr.length)
 
                 return arr;
             }
