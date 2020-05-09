@@ -52,7 +52,6 @@
                                     RGB.push(imgData[i]);
                                 }
                             }
-                            
 
                             //convert to L*A*B*
                             var RGBlen = RGB.length;
@@ -69,11 +68,6 @@
                             var L_len = L_layer.length;
                             var output = [];
 
-                            //convert LAB to RGB
-                            console.log("Test image RGB  [[[222. 231. 248.]");
-                            console.log("Test image LAB  [[[ 91.4410478    0.2373309   -9.24941604]");
-                            console.log("Output image LAB Guess (OG MODEL)  [[[[ 91.4410478  6.2803063 -43.889267 ]");
-                            console.log("LAB - " + L_layer[0] + ", " + AB[(0)] + ", " + AB[1]);
 
                             for (i = 0; i < L_len; i++) {
                                 //RGB image
