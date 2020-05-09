@@ -11,7 +11,9 @@ import matplotlib as mat
 import matplotlib.pyplot as plt
 from matplotlib.image import imread
 import matplotlib.image as mpimg
+from sklearn.model_selection import train_test_split
 import tensorflow as tf
+import tensorflowjs as tfjs
 import tensorflow.keras as k
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
@@ -29,11 +31,10 @@ config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
 
 # DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\*\\*.jpg'
-DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\beach\\*.jpg'
+DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\coast\\*.jpg'
 TEST_PATH  = '.\\Beta\\test\\*.jpg'
-EPOCHS = 200
-BATCH_SIZE = 16
-EPOCH_STEPS = 16
+EPOCHS = 10
+BATCH_SIZE = 8
 
 def get_images():
     print("\nGetting Images")
@@ -54,36 +55,46 @@ def get_images():
     
     return dataset2lab(X),T
 
-def train_test_LAB_values(X_train):
+def train_test_LAB_values(input):
     print("\nSplitting the L* layer")
-    X_train_L = X_train[:,:,:,0]
-    X_train_L = np.expand_dims(X_train_L, axis=-1)
+    X = input[:,:,:,0]
+    X = np.expand_dims(X, axis=-1)
 
-    print("Splitting the A*B* layers\n")
-    X_train_AB = X_train[:,:,:,1:] 
+    print("Splitting the A*B* layers")
+    Y = input[:,:,:,1:] 
     
-    print("X_train_L shape : ", X_train_L.shape)
-    print("X_train_AB shape : ", X_train_AB.shape)
-    return X_train_L, X_train_AB
+    print("Train test split")
+    X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.1, random_state=42)
+    
+    print("X_train_L shape : ", X_train.shape)
+    print("X_train_AB shape : ", X_test.shape)
+    print("X_test_L shape : ", y_train.shape)
+    print("X_test_AB shape : ", y_test.shape)
+    print("X_train_L type : ", type(X_train))
+    print("X_train_AB type : ", type(X_test))
+    print("X_test_L type : ", type(y_train))
+    print("X_test_AB type : ", type(y_test))
+    
+    return np.array(X_train), np.array(X_test), np.array(y_train), np.array(y_test)
 
 def dataset2lab(data):
-    print("Splitting the A*B* layers\n")
+    print("Converting to L*A*B* layers")
     dataset = data.astype(np.float)
     for i in range(dataset.shape[0]):
-        if(i % 500 == 0):
-            print("File ",i)
+        if(i % 250 == 0):
+            print("Converted file ",i,"/",dataset.shape[0])
         dataset[i] = rgb2lab(dataset[i]/255.0)
     return dataset
 
-def get_test_image():
-    testimages = glob.glob(TEST_PATH)
-    testimage = img_to_array(load_img(testimages[0]))
-    testimage = rgb2lab(1.0/255*testimage)[:,:,0]
-    testimage = np.expand_dims(testimage, axis=0)
-    testimage = np.expand_dims(testimage, axis=-1)
-    # testimage = testimage.reshape(256, 256, 1)
-    print("Test image -",testimage.shape)
-    return testimage
+# def get_test_image():
+#     testimages = glob.glob(TEST_PATH)
+#     testimage = img_to_array(load_img(testimages[0]))
+#     testimage = rgb2lab(1.0/255*testimage)[:,:,0]
+#     testimage = np.expand_dims(testimage, axis=0)
+#     testimage = np.expand_dims(testimage, axis=-1)
+#     # testimage = testimage.reshape(256, 256, 1)
+#     print("Test image -",testimage.shape)
+#     return testimage
 
 def create_gen():
     print("\nCreating Model")
@@ -106,9 +117,11 @@ def create_gen():
     model.add(UpSampling2D((2, 2)))
     model.compile(optimizer='rmsprop', loss='mse')
     
+    model.summary()
+    
     return model
 
-def fit_gen(model, X_l, X_ab):
+def fit_gen(model, Xtrain, Xtest, Ytrain, Ytest):
     print("\nImage transformer")
     # Image transformer
     datagen = ImageDataGenerator(
@@ -117,22 +130,25 @@ def fit_gen(model, X_l, X_ab):
             rotation_range=20,
             horizontal_flip=True)
 
-    print("\nGenerate training data")
-
     print("\nTrain model")
     # Train model      
-    tensorboard = TensorBoard(log_dir="output\\first_run")
-
-    print("\nfit_generator")
-    for epoch in range(EPOCHS):
-        start = time.time()
+    # tensorboard = TensorBoard(log_dir="output\\first_run")
+    
+    # for epoch in range(EPOCHS):
+    #     start = time.time()
         
-        model.fit(x=X_l, 
-                y=X_ab,
+    model.fit(  x=Xtrain, 
+                y=Ytrain,
                 batch_size=BATCH_SIZE,
-                epochs=1)
+                validation_data = (Xtest, Ytest),
+                steps_per_epoch = len(Xtrain)/BATCH_SIZE,
+                epochs = EPOCHS)        
+    # model.fit(x=X_l, 
+    #         y=X_ab,
+    #         batch_size=BATCH_SIZE,
+    #         epochs=1)
 
-        print ('\nTime for epoch {} is {} sec'.format(epoch + 1, time.time()-start))
+    # print ('\nTime for epoch {} is {} sec'.format(epoch + 1, time.time()-start))
     
     return model
 
@@ -157,8 +173,6 @@ def output_colourisations(model, testimages):
         print("\nB_layer", B_layer.shape)
 
         # Output colorizations
-        print("\nOutput colorizations")
-
         timestr = time.strftime("%Y%m%d-%H%M%S")
 
         cur = np.zeros((256, 256, 3), dtype=np.float)
@@ -203,15 +217,14 @@ def output_colourisations(model, testimages):
         # plt.savefig('first-result-'+str(count)+'.png', bbox_inches='tight')
 
 X, testimages = get_images()
-# data = dataset2lab(X)
-
-X_train_L, X_train_AB = train_test_LAB_values(X)
+X_train, X_test, y_train, y_test = train_test_LAB_values(X)
 
 del X
 
 gen = create_gen()
-gen = fit_gen(gen, X_train_L, X_train_AB)
+gen = fit_gen(gen, X_train, X_test, y_train, y_test)
 
 output_colourisations(gen, testimages)
 
-# gen.save('.\\Beta\\Models\\beta.h5')
+gen.save('.\\Beta\\Models\\beta.h5')
+tfjs.converters.save_keras_model(gen, '.\\Beta\\Models\\JS')
