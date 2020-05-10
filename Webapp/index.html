@@ -16,9 +16,29 @@
     </head>
 
     <body>
-        <input type="file" onChange="show_image(this);" name="img" multiple>
-        <h3>Canvas</h3>
-        <canvas id="canvas" width="512" height="512"></canvas>
+        <div class="container">
+            <div class="row header-row">
+                <h1>Colourisation</h1><br/>
+                <input type="file" onChange="show_image(this);" name="img" multiple>
+            </div>
+            <div class="row function-row">
+                <div class="col-sm text-center">
+                    <h3>Input</h3>
+                    <div class="canvas-box">
+                        <canvas id="input" width="256" height="256"></canvas>
+                    </div>
+                </div>
+                <div class="col-sm text-center">
+                    <h5 id="message"></h5>
+                </div>
+                <div class="col-sm text-center">
+                    <h3>Output</h3>
+                    <div class="canvas-box">
+                        <canvas id="output" width="256" height="256"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <script>
             console.log('Hello TensorFlow');
@@ -33,14 +53,15 @@
                         var image=new Image();
                         image.src=e.target.result;
                         image.onload = async function () {
-                            canvas = document.querySelector("#canvas");
-
+                            canvas = document.querySelector("#input");
                             ctx = canvas.getContext("2d");
+                            output_canvas = document.querySelector("#output");
+                            output_ctx = output_canvas.getContext("2d");
                             ctx.drawImage(image, 0, 0);
 
                             //get data from image
+                            document.getElementById("message").innerHTML = "Extract Image Data";
                             var imgData = ctx.getImageData(0, 0, 256, 256).data;
-
                             //alter image data
                             //remove A value from RGBA
                             var len = imgData.length;
@@ -54,13 +75,14 @@
                             }
 
                             //convert to L*A*B*
+                            document.getElementById("message").innerHTML = "Convert to L*A*B*";
                             var RGBlen = RGB.length;
                             var LAB = [];
                             var L_layer = [];
 
                             for (i = 0; i < RGBlen; i+=3) {
                                 LAB.push(rgb2lab([RGB[i], RGB[i+1], RGB[i+2]]));
-                                L_layer.push(LAB[LAB.length - 1][0]);
+                                L_layer.push((LAB[LAB.length - 1][0] / 50) - 1);
                             }
 
                             //get output
@@ -71,11 +93,12 @@
 
                             for (i = 0; i < L_len; i++) {
                                 //RGB image
-                                output.push(lab2rgb([L_layer[i], AB[(i*2)]*128, AB[(i*2)+1]*128]));
+                                output.push(lab2rgb([(L_layer[i] + 1) * 50, AB[(i*2)]*128, AB[(i*2)+1]*128]));
                             }
                             console.log("output length - " + output.length);
                             output = output.flat();
 
+                            document.getElementById("message").innerHTML = "Output New Image";
                             //output in canvas
                             var width = 256,
                                 height = 256,
@@ -90,13 +113,14 @@
                             }
 
                             // create imageData object
-                            var idata = ctx.createImageData(width, height);
+                            var idata = output_ctx.createImageData(width, height);
 
                             // set our buffer as source
                             idata.data.set(buffer);
 
                             // update canvas with new data
-                            ctx.putImageData(idata, 256, 256);
+                            output_ctx.putImageData(idata, 0, 0);
+                            document.getElementById("message").innerHTML = "Done";
                         };
                     }
                 }
@@ -107,12 +131,14 @@
             }
 
             async function learn(input){
-                const model = await tf.loadLayersModel('https://raw.githubusercontent.com/c20rtn/Greyscale-Colourisation-GAN/master/Alpha/Models/jsmodel/model.json');
+                document.getElementById("message").innerHTML = "Retrieve Model";
+                const model = await tf.loadLayersModel('https://raw.githubusercontent.com/c20rtn/Greyscale-Colourisation-GAN/master/Models/ColorGAN/js/model.json');
                 model.summary()
                 console.log("weights - " + model.layers[0].getWeights().length)
 
                 console.log("Input - " + input.length)
 
+                document.getElementById("message").innerHTML = "Predict Colourisations";
                 let output = model.predict(tf.tensor4d(input, [1, 256, 256, 1]));
                 let values = output.dataSync();
                 let arr = Array.from(values);

@@ -1,7 +1,29 @@
 @import url('https://fonts.googleapis.com/css?family=Rajdhani&display=swap');
 html, body{
     font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif, sans-serif;
-    background-color: whitesmoke;
     color: #353535;
     padding: 20px;
+    height : 100%;
+}
+
+.header-row{
+    background-color: lightcoral;
+    padding: 10px;
+    text-align: center;
+    margin:5px 10px;
+    border-radius: 10px;
+}
+.function-row{
+    background-color: lightsalmon;
+    padding: 10px;
+    text-align: center;
+    margin:5px 10px;
+    border-radius: 10px;
+}
+.canvas-box{
+    background-color: white;
+    padding: 10px;
+    text-align: center;
+    margin:5px;
+    border-radius: 10px;
 }
