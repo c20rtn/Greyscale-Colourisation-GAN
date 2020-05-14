@@ -19,17 +19,26 @@
         <div class="container">
             <div class="row header-row">
                 <div class="col text-center">
-                    <h1>Colourisation</h1><br>
+                    <h1>Colourisation Through Machine Learning</h1>
                 </div>
             </div>
             <div class="row image-row">
                 <div class="col text-center">
-                    
+                    <h2>What is it?</h2>
+                    <p>
+                        This colourisation web application uses machine learning methods to colour grayscale images.
+                    <br>
+                        It extracts the grayscale values by converting the colour space and predicting the reamining colour values.
+                    <br>
+                        The models were built in Keras for Python and translated to TensorflowJS models for website usage.
+                    <br>
+                        The GitHub repository can be found <a href="https://github.com/c20rtn/Greyscale-Colourisation-GAN">here.</a>
+                    </p>
                 </div>
             </div>
             <div class="row image-row">
                 <div class="col text-center">
-                    <h4>Choose a Local Image to Input or...</h4>
+                    <h4>Choose a Local 256 by 256 Image to Input or...</h4>
                     <input type="file" class="upload" onChange="show_image(this);" name="img" multiple>
                     <br>
                     <br>
