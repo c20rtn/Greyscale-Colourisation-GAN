@@ -31,9 +31,9 @@ config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
 
 # DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\*\\*.jpg'
-DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\coast\\*.jpg'
+DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\**\\*.jpg'
 TEST_PATH  = '.\\Beta\\test\\*.jpg'
-EPOCHS = 10
+EPOCHS = 100
 BATCH_SIZE = 8
 
 def get_images():
@@ -46,12 +46,6 @@ def get_images():
     print("\nData", X.shape)
     
     T = glob.glob(TEST_PATH)
-    # labels = np.array([os.path.basename(os.path.dirname(image)) for image in files])
-    # unique_labels = np.unique(labels).tolist()
-    # print(unique_labels)
-    # y = labels
-    # y = np.array(list(map(lambda x: unique_labels.index(x), labels)))
-    # print(np.unique(y))
     
     return dataset2lab(X),T
 
@@ -62,6 +56,7 @@ def train_test_LAB_values(input):
 
     print("Splitting the A*B* layers")
     Y = input[:,:,:,1:] 
+    Y /= 128
     
     print("Train test split")
     X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.1, random_state=42)
@@ -70,10 +65,6 @@ def train_test_LAB_values(input):
     print("X_train_AB shape : ", X_test.shape)
     print("X_test_L shape : ", y_train.shape)
     print("X_test_AB shape : ", y_test.shape)
-    print("X_train_L type : ", type(X_train))
-    print("X_train_AB type : ", type(X_test))
-    print("X_test_L type : ", type(y_train))
-    print("X_test_AB type : ", type(y_test))
     
     return np.array(X_train), np.array(X_test), np.array(y_train), np.array(y_test)
 
@@ -81,74 +72,60 @@ def dataset2lab(data):
     print("Converting to L*A*B* layers")
     dataset = data.astype(np.float)
     for i in range(dataset.shape[0]):
-        if(i % 250 == 0):
+        if(i % 50 == 0):
             print("Converted file ",i,"/",dataset.shape[0])
         dataset[i] = rgb2lab(dataset[i]/255.0)
     return dataset
 
-# def get_test_image():
-#     testimages = glob.glob(TEST_PATH)
-#     testimage = img_to_array(load_img(testimages[0]))
-#     testimage = rgb2lab(1.0/255*testimage)[:,:,0]
-#     testimage = np.expand_dims(testimage, axis=0)
-#     testimage = np.expand_dims(testimage, axis=-1)
-#     # testimage = testimage.reshape(256, 256, 1)
-#     print("Test image -",testimage.shape)
-#     return testimage
-
 def create_gen():
     print("\nCreating Model")
+    # Building the neural network
     model = k.Sequential()
     model.add(InputLayer(input_shape=(256, 256, 1)))
-    model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(64, (3, 3), activation='relu', padding='same', strides=2))
-    model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(128, (3, 3), activation='relu', padding='same', strides=2))
-    model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(256, (3, 3), activation='relu', padding='same', strides=2))
-    model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-    model.add(UpSampling2D((2, 2)))
-    model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+    
+    # model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+    # model.add(Conv2D(64, (3, 3), activation='relu', padding='same', strides=2))
+    # model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+    # model.add(Conv2D(128, (3, 3), activation='relu', padding='same', strides=2))
+    # model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+    # model.add(Conv2D(256, (3, 3), activation='relu', padding='same', strides=2))
+    # model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
+    # model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+    # model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+    # model.add(UpSampling2D((2, 2)))
+    # model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+    # model.add(UpSampling2D((2, 2)))
+    # model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+    # model.add(Conv2D(2, (3, 3), activation='tanh', padding='same'))
+    # model.add(UpSampling2D((2, 2)))
+    
+    model.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
+    model.add(Conv2D(8, (3, 3), activation='relu', padding='same', strides=2))
+    model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
+    model.add(Conv2D(16, (3, 3), activation='relu', padding='same', strides=2))
+    model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+    model.add(Conv2D(32, (3, 3), activation='relu', padding='same', strides=2))
     model.add(UpSampling2D((2, 2)))
     model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(2, (3, 3), activation='tanh', padding='same'))
     model.add(UpSampling2D((2, 2)))
-    model.compile(optimizer='rmsprop', loss='mse')
+    model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
+    model.add(UpSampling2D((2, 2)))
+    model.add(Conv2D(2, (3, 3), activation='tanh', padding='same'))
     
-    model.summary()
+    # Finish model
+    model.compile(optimizer='rmsprop', loss='mse')
     
     return model
 
 def fit_gen(model, Xtrain, Xtest, Ytrain, Ytest):
-    print("\nImage transformer")
-    # Image transformer
-    datagen = ImageDataGenerator(
-            shear_range=0.2,
-            zoom_range=0.2,
-            rotation_range=20,
-            horizontal_flip=True)
 
     print("\nTrain model")
-    # Train model      
-    # tensorboard = TensorBoard(log_dir="output\\first_run")
-    
-    # for epoch in range(EPOCHS):
-    #     start = time.time()
-        
     model.fit(  x=Xtrain, 
                 y=Ytrain,
                 batch_size=BATCH_SIZE,
                 validation_data = (Xtest, Ytest),
                 steps_per_epoch = len(Xtrain)/BATCH_SIZE,
                 epochs = EPOCHS)        
-    # model.fit(x=X_l, 
-    #         y=X_ab,
-    #         batch_size=BATCH_SIZE,
-    #         epochs=1)
-
-    # print ('\nTime for epoch {} is {} sec'.format(epoch + 1, time.time()-start))
     
     return model
 
@@ -157,7 +134,7 @@ def output_colourisations(model, testimages):
     for img in testimages:
         count = count + 1
         testimage = img_to_array(load_img(img))
-        testimage = rgb2lab(1.0/255*testimage)[:,:,0]
+        testimage = rgb2lab(testimage/255.0)[:,:,0]
         testimage = testimage.reshape(1, 256, 256, 1)
 
         output = model.predict(testimage)
@@ -212,9 +189,9 @@ def output_colourisations(model, testimages):
         ax[4].axis('off')
         ax[4].set_title("B: blue to yellow")
 
-        plt.show()
-        # fig.tight_layout()
-        # plt.savefig('first-result-'+str(count)+'.png', bbox_inches='tight')
+        #plt.show()
+        fig.tight_layout()
+        plt.savefig('beta-result-'+str(count)+'.png', bbox_inches='tight')
 
 X, testimages = get_images()
 X_train, X_test, y_train, y_test = train_test_LAB_values(X)

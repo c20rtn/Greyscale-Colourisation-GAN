@@ -1,29 +1,93 @@
 @import url('https://fonts.googleapis.com/css?family=Rajdhani&display=swap');
-html, body{
+html,body{
     font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif, sans-serif;
     color: #353535;
-    padding: 20px;
     height : 100%;
+    padding: 20px;
 }
-
 .header-row{
-    background-color: lightcoral;
+    background-color: snow;
     padding: 10px;
     text-align: center;
     margin:5px 10px;
     border-radius: 10px;
 }
 .function-row{
-    background-color: lightsalmon;
+    background-color:lightblue;
     padding: 10px;
     text-align: center;
     margin:5px 10px;
     border-radius: 10px;
 }
+.image-row{
+  background-color: lightblue;
+  padding: 10px;
+  text-align: center;
+  margin:5px 10px;
+  border-radius: 10px;
+}
 .canvas-box{
-    background-color: white;
+    background-color: whitesmoke;
     padding: 10px;
     text-align: center;
-    margin:5px;
+    margin:5px auto;
     border-radius: 10px;
+    height: max-content;
+    width: max-content;
 }
+.sample{
+  margin:10px 15px;
+  border-radius: 5px;
+}
+.sample:hover{
+  opacity: 70%;
+}
+
+.upload{
+  margin:10px 15px;
+  padding: 15px;
+  border-radius: 5px;
+  border: 2px solid black;
+  background-color: aliceblue;
+}
+
+.spinner {
+    width: 150px;
+    height: 150px;
+    position: relative;
+    margin: 80px auto;
+  }
+  
+  .double-bounce1, .double-bounce2 {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-color: lightcyan;
+    opacity: 0.7;
+    position: absolute;
+    top: 0;
+    left: 0;
+    
+    -webkit-animation: sk-bounce 2.0s infinite ease-in-out;
+    animation: sk-bounce 2.0s infinite ease-in-out;
+  }
+  
+  .double-bounce2 {
+    -webkit-animation-delay: -1.0s;
+    animation-delay: -1.0s;
+  }
+  
+  @-webkit-keyframes sk-bounce {
+    0%, 100% { -webkit-transform: scale(0.0) }
+    50% { -webkit-transform: scale(1.0) }
+  }
+  
+  @keyframes sk-bounce {
+    0%, 100% { 
+      transform: scale(0.0);
+      -webkit-transform: scale(0.0);
+    } 50% { 
+      transform: scale(1.0);
+      -webkit-transform: scale(1.0);
+    }
+  }

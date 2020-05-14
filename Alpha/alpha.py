@@ -7,6 +7,7 @@ import os
 import random
 import time
 import cv2
+import sys
 import matplotlib as mat
 import matplotlib.pyplot as plt
 from matplotlib.image import imread
@@ -31,7 +32,7 @@ session = InteractiveSession(config=config)
 
 DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\coast\\n203015.jpg'
 TEST_PATH  = '.\\Alpha\\test\\*.jpg'
-EPOCHS = 1000
+EPOCHS = 100
 
 # Get images
 def get_images():
@@ -39,8 +40,8 @@ def get_images():
     image = np.array(image, dtype=np.uint8)
     T = glob.glob(TEST_PATH)
 
-    X = rgb2lab(1.0/255*image)[:,:,0]
-    Y = rgb2lab(1.0/255*image)[:,:,1:]
+    X = rgb2lab(image/255.0)[:,:,0]
+    Y = rgb2lab(image/255.0)[:,:,1:]
     Y /= 128
     X = X.reshape(1, 256, 256, 1)
     Y = Y.reshape(1, 256, 256, 2)
@@ -53,9 +54,10 @@ def get_images():
 def create_generator():
     # Building the neural network
     model = k.Sequential()
-    model.add(InputLayer(input_shape=(None, None, 1)))
-    model.add(Conv2D(8, (3, 3), activation='relu', padding='same', strides=2))
+    model.add(InputLayer(input_shape=(256, 256, 1)))
+    
     model.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
+    model.add(Conv2D(8, (3, 3), activation='relu', padding='same', strides=2))
     model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
     model.add(Conv2D(16, (3, 3), activation='relu', padding='same', strides=2))
     model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
@@ -77,6 +79,7 @@ def train_gen(model, X, Y):
         batch_size=1,
         epochs=EPOCHS)
     print(model.evaluate(X, Y, batch_size=1))
+    
     return model
 
 def output_colourisations(model, test):
@@ -85,7 +88,8 @@ def output_colourisations(model, test):
         print(img)
         count = count + 1
         testimage = img_to_array(load_img(img))
-        testimage = rgb2lab(1.0/255*testimage)[:,:,0]
+        testimage = rgb2lab(testimage/255.0)
+        testimage = testimage[:,:,0]
         testimage = testimage.reshape(1, 256, 256, 1)
 
         output = model.predict(testimage)
@@ -147,10 +151,18 @@ def output_colourisations(model, test):
         # plt.savefig('first-result-'+str(count)+'.png', bbox_inches='tight')
 
 print("\n\n\n",tf.__version__,"\n\n\n")
+print("\n\n\n",tfjs.__version__,"\n\n\n")
 X, Y, testimages = get_images()
 gen = create_generator()
 gen = train_gen(gen, X, Y)
+
+# 
+# gen = tf.keras.models.load_model('.\\Alpha\\Models\\alpha.h5')
+
+# Check its architecture
+gen.summary()
+
 output_colourisations(gen, testimages)
 
-tfjs.converters.save_keras_model(gen, '.\\Alpha\\Models\\JS')
-# gen.save()
+# gen.save('.\\Alpha\\Models\\model.h5')
+# tfjs.converters.save_keras_model(gen, '.\\Alpha\\Models\\JS')

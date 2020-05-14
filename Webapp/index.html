@@ -15,11 +15,50 @@
         <script src="Scripts/jquery-3.5.0.min.js"></script>
     </head>
 
-    <body>
+    <body style="background-color:cadetblue;">
         <div class="container">
             <div class="row header-row">
-                <h1>Colourisation</h1><br/>
-                <input type="file" onChange="show_image(this);" name="img" multiple>
+                <div class="col text-center">
+                    <h1>Colourisation</h1><br>
+                </div>
+            </div>
+            <div class="row image-row">
+                <div class="col text-center">
+                    
+                </div>
+            </div>
+            <div class="row image-row">
+                <div class="col text-center">
+                    <h4>Choose a Local Image to Input or...</h4>
+                    <input type="file" class="upload" onChange="show_image(this);" name="img" multiple>
+                    <br>
+                    <br>
+                    <h4>...Choose a Sample Image</h4>
+                    <img class="sample" id="1" width="128" width="128" onclick="sampleimage(this.id);" src="Images/sample1.jpg"></img>
+                    <img class="sample" id="2" width="128" width="128" onclick="sampleimage(this.id);" src="Images/sample2.png"></img>
+                    <img class="sample" id="3" width="128" width="128" onclick="sampleimage(this.id);" src="Images/sample3.jpg"></img>
+                    <img class="sample" id="4" width="128" width="128" onclick="sampleimage(this.id);" src="Images/sample4.jpg"></img>
+                    <br>
+                    <br>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="exampleRadios" id="alpha">
+                            <label class="form-check-label" for="exampleRadios1">
+                                Alpha Model
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="exampleRadios" id="beta">
+                            <label class="form-check-label" for="exampleRadios2">
+                                Beta Model
+                            </label>
+                        </div>
+                        <div class="form-check disabled">
+                            <input class="form-check-input" type="radio" name="exampleRadios" id="gan" checked>
+                            <label class="form-check-label" for="exampleRadios3">
+                                GAN Model
+                            </label>
+                        </div>
+                </div>
             </div>
             <div class="row function-row">
                 <div class="col-sm text-center">
@@ -44,84 +83,20 @@
             console.log('Hello TensorFlow');
             console.log(tf.version);
 
-            async function show_image(obj){
+            function show_image(obj){
                 if (FileReader)
                 {
                     var reader = new FileReader();
                     reader.readAsDataURL(obj.files[0]);
                     reader.onload = function (e) {
-                        var image=new Image();
-                        image.src=e.target.result;
+                        var image = new Image();
+                        image.src= e.target.result;
                         image.onload = async function () {
                             canvas = document.querySelector("#input");
                             ctx = canvas.getContext("2d");
-                            output_canvas = document.querySelector("#output");
-                            output_ctx = output_canvas.getContext("2d");
                             ctx.drawImage(image, 0, 0);
-
-                            //get data from image
-                            document.getElementById("message").innerHTML = "Extract Image Data";
-                            var imgData = ctx.getImageData(0, 0, 256, 256).data;
-                            //alter image data
-                            //remove A value from RGBA
-                            var len = imgData.length;
-                            var RGB = []
-                            
-                            //get RGB data
-                            for (i = 0; i < len; i++) {
-                                if ((i+1) % 4 !== 0) {
-                                    RGB.push(imgData[i]);
-                                }
-                            }
-
-                            //convert to L*A*B*
-                            document.getElementById("message").innerHTML = "Convert to L*A*B*";
-                            var RGBlen = RGB.length;
-                            var LAB = [];
-                            var L_layer = [];
-
-                            for (i = 0; i < RGBlen; i+=3) {
-                                LAB.push(rgb2lab([RGB[i], RGB[i+1], RGB[i+2]]));
-                                L_layer.push((LAB[LAB.length - 1][0] / 50) - 1);
-                            }
-
-                            //get output
-                            var AB = await learn(L_layer);
-                            var L_len = L_layer.length;
-                            var output = [];
-
-
-                            for (i = 0; i < L_len; i++) {
-                                //RGB image
-                                output.push(lab2rgb([(L_layer[i] + 1) * 50, AB[(i*2)]*128, AB[(i*2)+1]*128]));
-                            }
-                            console.log("output length - " + output.length);
-                            output = output.flat();
-
-                            document.getElementById("message").innerHTML = "Output New Image";
-                            //output in canvas
-                            var width = 256,
-                                height = 256,
-                                buffer = new Uint8ClampedArray(width * height * 4); // have enough bytes
-
-                            var bufflen = width * height;
-                            for(var i = 0; i < bufflen; i++) {
-                                buffer[(i*4)] = output[(i*3)+0];
-                                buffer[(i*4)+1] = output[(i*3)+1];
-                                buffer[(i*4)+2] = output[(i*3)+2];
-                                buffer[(i*4)+3] = 255;
-                            }
-
-                            // create imageData object
-                            var idata = output_ctx.createImageData(width, height);
-
-                            // set our buffer as source
-                            idata.data.set(buffer);
-
-                            // update canvas with new data
-                            output_ctx.putImageData(idata, 0, 0);
-                            document.getElementById("message").innerHTML = "Done";
-                        };
+                            colour();
+                        }
                     }
                 }
                 else
@@ -129,23 +104,157 @@
                     alert("boo boo")
                 }
             }
+            function sampleimage(id){
+                canvas = document.querySelector("#input");
+                ctx = canvas.getContext("2d");
+                switch (id) {
+                    case "1":
+                        var image = document.getElementById("1"); image.crossOrigin = "Anonymous";
+                        ctx.drawImage(image, 0, 0);
+                        break;
+                    case "2":
+                        var image = document.getElementById("2");
+                        ctx.drawImage(image, 0, 0);
+                        break;
+                    case "3":
+                        var image = document.getElementById("3");
+                        ctx.drawImage(image, 0, 0);
+                        break;
+                    default:
+                        var image = document.getElementById("4");
+                        ctx.drawImage(image, 0, 0);
+                }
+                colour();
+            }
 
+
+            async function colour() {
+                //get data from image
+                document.getElementById("message").innerHTML = "<div class=\"spinner\"><div class=\"double-bounce1\"></div><div class=\"double-bounce2\"></div></div>";
+                
+                document.getElementById("alpha").disabled = true;
+                document.getElementById("beta").disabled = true;
+                document.getElementById("gan").disabled = true;
+
+                canvas = document.querySelector("#input");
+                ctx = canvas.getContext("2d");
+                var imgData = ctx.getImageData(0, 0, 256, 256).data;
+                //alter image data
+                //remove A value from RGBA
+                var len = imgData.length;
+                var RGB = []
+                
+                //get RGB data
+                for (i = 0; i < len; i++) {
+                    if ((i+1) % 4 !== 0) {
+                        RGB.push(imgData[i]);
+                    }
+                }
+
+                //convert to L*A*B*
+                var RGBlen = RGB.length;
+                var LAB = [];
+                var L_layer = [];
+
+                if(document.getElementById('gan').checked){
+                    for (i = 0; i < RGBlen; i+=3) {
+                        LAB.push(rgb2lab([RGB[i], RGB[i+1], RGB[i+2]]));
+                        L_layer.push((LAB[LAB.length - 1][0] / 50) - 1);
+                    }
+                }
+                else{
+                    for (i = 0; i < RGBlen; i+=3) {
+                        LAB.push(rgb2lab([RGB[i], RGB[i+1], RGB[i+2]]));
+                        L_layer.push(LAB[LAB.length - 1][0]);
+                    }
+                }
+                //get output
+                var AB = await learn(L_layer);
+                var L_len = L_layer.length;
+                var output = [];
+
+                
+                if(document.getElementById('gan').checked){
+                    for (i = 0; i < L_len; i++) {
+                        //RGB image
+                        output.push(lab2rgb([(L_layer[i] + 1) * 50, AB[(i*2)]*128, AB[(i*2)+1]*128]));
+                    }
+                }
+                else{
+                    for (i = 0; i < L_len; i++) {
+                        //RGB image
+                        output.push(lab2rgb([L_layer[i], AB[(i*2)]*128, AB[(i*2)+1]*128]));
+                    }
+                }
+                console.log("output length - " + output.length);
+                output = output.flat();
+
+                //output in canvas
+                var width = 256,
+                    height = 256,
+                    buffer = new Uint8ClampedArray(width * height * 4); // have enough bytes
+
+                var bufflen = width * height;
+                for(var i = 0; i < bufflen; i++) {
+                    buffer[(i*4)] = output[(i*3)+0];
+                    buffer[(i*4)+1] = output[(i*3)+1];
+                    buffer[(i*4)+2] = output[(i*3)+2];
+                    buffer[(i*4)+3] = 255;
+                }
+
+                output_canvas = document.querySelector("#output");
+                output_ctx = output_canvas.getContext("2d");
+                // create imageData object
+                var idata = output_ctx.createImageData(width, height);
+
+                // set our buffer as source
+                idata.data.set(buffer);
+
+                // update canvas with new data
+                output_ctx.putImageData(idata, 0, 0);
+                document.getElementById("message").innerHTML = "<br><br><br><br><br><br>Done";
+
+                document.getElementById("alpha").disabled = false;
+                document.getElementById("beta").disabled = false;
+                document.getElementById("gan").disabled = false;
+            };
             async function learn(input){
-                document.getElementById("message").innerHTML = "Retrieve Model";
-                const model = await tf.loadLayersModel('https://raw.githubusercontent.com/c20rtn/Greyscale-Colourisation-GAN/master/Models/ColorGAN/js/model.json');
-                model.summary()
-                console.log("weights - " + model.layers[0].getWeights().length)
+                if(document.getElementById('alpha').checked){
+                    const model = await tf.loadLayersModel('https://raw.githubusercontent.com/c20rtn/Greyscale-Colourisation-GAN/master/Models/Alpha/js/model.json');
+                    model.summary()
 
-                console.log("Input - " + input.length)
+                    let output = model.predict(tf.tensor4d(input, [1, 256, 256, 1]));
+                    let values = output.dataSync();
+                    let arr = Array.from(values);
 
-                document.getElementById("message").innerHTML = "Predict Colourisations";
-                let output = model.predict(tf.tensor4d(input, [1, 256, 256, 1]));
-                let values = output.dataSync();
-                let arr = Array.from(values);
+                    console.log("Output - " + arr.length)
 
-                console.log("Output - " + arr.length)
+                    return arr;
+                }
+                else if(document.getElementById('beta').checked){
+                    const model = await tf.loadLayersModel('https://raw.githubusercontent.com/c20rtn/Greyscale-Colourisation-GAN/master/Models/Beta/js/model.json');
+                    model.summary()
 
-                return arr;
+                    let output = model.predict(tf.tensor4d(input, [1, 256, 256, 1]));
+                    let values = output.dataSync();
+                    let arr = Array.from(values);
+
+                    console.log("Output - " + arr.length)
+
+                    return arr;
+                }
+                else{
+                    const model = await tf.loadLayersModel('https://raw.githubusercontent.com/c20rtn/Greyscale-Colourisation-GAN/master/Models/GAN/js/model.json');
+                    model.summary()
+
+                    let output = model.predict(tf.tensor4d(input, [1, 256, 256, 1]));
+                    let values = output.dataSync();
+                    let arr = Array.from(values);
+
+                    console.log("Output - " + arr.length)
+
+                    return arr;
+                }
             }
 
             function lab2rgb(lab){
@@ -173,10 +282,7 @@
 
 
             function rgb2lab(rgb){
-                var r = rgb[0] / 255,
-                    g = rgb[1] / 255,
-                    b = rgb[2] / 255,
-                    x, y, z;
+                var r = rgb[0] / 255, g = rgb[1] / 255, b = rgb[2] / 255, x, y, z;
 
                 r = (r > 0.04045) ? Math.pow((r + 0.055) / 1.055, 2.4) : r / 12.92;
                 g = (g > 0.04045) ? Math.pow((g + 0.055) / 1.055, 2.4) : g / 12.92;
