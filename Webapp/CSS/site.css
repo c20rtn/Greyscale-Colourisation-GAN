@@ -41,6 +41,7 @@ html,body{
 }
 .sample:hover{
   opacity: 70%;
+  cursor: pointer;
 }
 
 .upload{
