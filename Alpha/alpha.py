@@ -46,6 +46,9 @@ def get_images():
     X = X.reshape(1, 256, 256, 1)
     Y = Y.reshape(1, 256, 256, 2)
     
+    assert X.shape == (1, 256, 256, 1), "Should be (1, 256, 256, 1)"
+    assert Y.shape == (1, 256, 256, 2), "Should be (1, 256, 256, 2)"
+    
     print("X size - ", X.shape)
     print("Y size - ", Y.shape)
     print("test images size - ", len(T), " - ", T[0])
@@ -74,6 +77,10 @@ def create_generator():
     return model
 
 def train_gen(model, X, Y):
+    
+    assert X.shape == (1, 256, 256, 1), "Should be (1, 256, 256, 1)"
+    assert Y.shape == (1, 256, 256, 2), "Should be (1, 256, 256, 2)"
+    
     model.fit(x=X, 
         y=Y,
         batch_size=1,
@@ -92,8 +99,12 @@ def output_colourisations(model, test):
         testimage = testimage[:,:,0]
         testimage = testimage.reshape(1, 256, 256, 1)
 
+        assert testimage.shape == (1, 256, 256, 1), "Should be (1, 256, 256, 1)"
+        
         output = model.predict(testimage)
         output *= 128
+        
+        assert output.shape == (1, 256, 256, 2), "Should be (1, 256, 256, 2)"
 
         print("\nShow colorizations")
 

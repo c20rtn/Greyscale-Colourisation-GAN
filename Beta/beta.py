@@ -31,7 +31,7 @@ config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
 
 # DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\*\\*.jpg'
-DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\**\\*.jpg'
+DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\coast\\*.jpg'
 TEST_PATH  = '.\\Beta\\test\\*.jpg'
 EPOCHS = 100
 BATCH_SIZE = 8
@@ -58,6 +58,9 @@ def train_test_LAB_values(input):
     Y = input[:,:,:,1:] 
     Y /= 128
     
+    assert X[0,:,:].shape == (256, 256, 1), "Should be (n, 256, 256, 1)"
+    assert Y[0,:,:,:].shape == (256, 256, 2), "Should be (n, 256, 256, 2)"
+    
     print("Train test split")
     X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.1, random_state=42)
     
@@ -75,6 +78,9 @@ def dataset2lab(data):
         if(i % 50 == 0):
             print("Converted file ",i,"/",dataset.shape[0])
         dataset[i] = rgb2lab(dataset[i]/255.0)
+    
+    assert len(dataset) == len(data), "Should be equal"
+    
     return dataset
 
 def create_gen():
@@ -82,22 +88,6 @@ def create_gen():
     # Building the neural network
     model = k.Sequential()
     model.add(InputLayer(input_shape=(256, 256, 1)))
-    
-    # model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-    # model.add(Conv2D(64, (3, 3), activation='relu', padding='same', strides=2))
-    # model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-    # model.add(Conv2D(128, (3, 3), activation='relu', padding='same', strides=2))
-    # model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-    # model.add(Conv2D(256, (3, 3), activation='relu', padding='same', strides=2))
-    # model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
-    # model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-    # model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-    # model.add(UpSampling2D((2, 2)))
-    # model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-    # model.add(UpSampling2D((2, 2)))
-    # model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
-    # model.add(Conv2D(2, (3, 3), activation='tanh', padding='same'))
-    # model.add(UpSampling2D((2, 2)))
     
     model.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
     model.add(Conv2D(8, (3, 3), activation='relu', padding='same', strides=2))

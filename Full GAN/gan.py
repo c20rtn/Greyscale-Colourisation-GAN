@@ -32,7 +32,7 @@ config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
 
 # DATA_PATH  = '..\\Final Year Project\\Datasets\\data\\1\\*.jpg'
-DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\**\\*.jpg'
+DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\coast\\*.jpg'
 TEST_PATH  = '.\\Full GAN\\test\\beach.jpg'
 EPOCHS = 20
 BUFFER_SIZE = 5000
@@ -41,254 +41,249 @@ DISC_SHAPE = (256,256,2)
 GEN_SHAPE = (256,256,1)
 TRAIN_SET = 320
 
-def get_images():
-    print("\nGetting Images")
-    X = []
-    files = glob.glob(DATA_PATH)
-    for filename in files:
-        X.append(img_to_array(load_img(filename)))
-    X = np.array(X, dtype=np.uint8)
-    print("\nData", X.shape)
-    
-    T = img_to_array(load_img(TEST_PATH))
-    T = np.array(T, dtype=np.uint8)
-    T = rgb2lab(T/255.0)
-    ab = T[:,:,1:]
-    T = T[:,:,0] / 50 - 1
-    T = T.reshape(1, 256, 256, 1)
-    
-    if len(X) > 4000:
-        print("\nTrim dataset")
-        X = X[:4000]
-    else:
-        print("\nDataset not trimmed")
-    
-    print("X : ", X.shape)
-    print("Test : ", T.shape)
-    
-    return dataset2lab(X),T
-
-def train_test_LAB_values(input):
-    print("\nSplitting the L* layer")
-    X = input[:,:,:,0]
-    X = X / 50 - 1
-    X = np.expand_dims(X, axis=-1)
-
-    print("Splitting the A*B* layers")
-    Y = input[:,:,:,1:] 
-    Y = (Y + 128) / 255 * 2 - 1
-    
-    print("Train test split")
-    X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.1, random_state=42)
-    
-    print("X_train_L shape : ", X_train.shape)
-    print("X_train_AB shape : ", X_test.shape)
-    print("X_test_L shape : ", y_train.shape)
-    print("X_test_AB shape : ", y_test.shape)
-    return np.array(X_train), np.array(X_test), np.array(y_train), np.array(y_test)
-
-def dataset2lab(data):
-    print("Converting to L*A*B* layers")
-    dataset = data.astype(np.float)
-    for i in range(dataset.shape[0]):
-        if(i % 50 == 0):
-            print("Converted file ",i,"/",dataset.shape[0])
-        dataset[i] = rgb2lab(dataset[i]/255.0)
-    return dataset
-
-def make_generator():
-    print("\nCreating Generator")
-    model = Sequential()
-    
-    model.add(Conv2D(64,(3,3),padding='same',strides=2, input_shape=GEN_SHAPE))
-    model.add(BatchNormalization())
-    model.add(LeakyReLU(0.2))
-    #128 x 128
-    
-    model.add(Conv2D(128, (3,3), padding='same',strides=2))
-    model.add(BatchNormalization())
-    model.add(LeakyReLU(0.2))
-    #64 x 64
-    
-    model.add(Conv2D(256, (3,3),padding='same',strides=2))
-    model.add(BatchNormalization())
-    model.add(LeakyReLU(0.2))
-    #32 x 32 
-    
-    model.add(Conv2D(512,(3,3),padding='same',strides=2))
-    model.add(BatchNormalization())
-    model.add(LeakyReLU(0.2))
-    #16 x 16
-    
-    
-    model.add(Conv2DTranspose(256,(3,3), strides=(2,2),padding='same'))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-    
-    model.add(Conv2DTranspose(128,(3,3),strides=(2,2),padding='same'))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-    
-    model.add(Conv2DTranspose(64,(3,3),strides=(2,2),padding='same'))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-    
-    model.add(Conv2DTranspose(32,(3,3),strides=(2,2),padding='same'))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-    
-    model.add(Conv2D(2,(3,3),padding='same'))
-    model.add(Activation('tanh'))
-    
-    l_channel = Input(shape=GEN_SHAPE)
-    image = model(l_channel)
-    print("\nCreated Generator")
-    return k.Model(l_channel,image)
-
-def make_discriminator():
-    print("\nCreating Discriminator")
-    model = Sequential()
-    model.add(Conv2D(32,(3,3), padding='same',strides=2,input_shape=DISC_SHAPE))
-    model.add(LeakyReLU(0.2))
-    model.add(Dropout(0.25))
-    
-    model.add(Conv2D(64,(3,3),padding='same',strides=2))
-    model.add(BatchNormalization())
-    model.add(LeakyReLU(.2))
-    model.add(Dropout(0.25))
-    
-    
-    model.add(Conv2D(128,(3,3), padding='same', strides=2))
-    model.add(BatchNormalization())
-    model.add(LeakyReLU(0.2))
-    model.add(Dropout(0.25))
-    
-    
-    model.add(Conv2D(256,(3,3), padding='same',strides=2))
-    model.add(BatchNormalization())
-    model.add(LeakyReLU(0.2))
-    model.add(Dropout(0.25))
-    
-    
-    model.add(Flatten())
-    model.add(Dense(1))
-    model.add(Activation('sigmoid'))
-    
-    image = Input(shape=DISC_SHAPE)
-    validity = model(image)
-    print("\nCreated Discriminator")
-    return k.Model(image,validity)
-
-#for file saving
-timestr = time.strftime("%d%m%y-%H%M")
-
-X, T = get_images()
-
-X_train, X_test, y_train, y_test = train_test_LAB_values(X)
-
-del X
-
-############### Making the Discriminator ###############
-dis = make_discriminator()
-dis.compile(loss='binary_crossentropy', 
-                    optimizer=Adam(lr=0.00008,beta_1=0.5,beta_2=0.999), 
-                    metrics=['accuracy']) 
-
-#Making the Discriminator untrainable so that the generator can learn from fixed gradient 
-print("\nDiscriminator Training is OFF")
-dis.trainable = False
-
-############### Making the Generator ###############
-gen = make_generator()
-# gen = tf.keras.models.load_model('.\\Models\\ColorGAN\\generator_v1.h5')
-
-#Defining the combined model of the Generator and the Discriminator 
-print("\nDefining the combined model")
-l_channel = Input(shape=GEN_SHAPE)
-image = gen(l_channel) 
-valid = dis(image)
-
-combined_network = k.Model(l_channel, valid) 
-combined_network.compile(loss='binary_crossentropy', 
-                        optimizer=Adam(lr=0.0001,beta_1=0.5,beta_2=0.999))
-
-#creates lists to log the losses and accuracy
-print("\nlosses and accuracy")
-gen_losses = []
-disc_real_losses = []
-disc_fake_losses=[] 
-disc_acc = []
-
-#train the generator on a full set of 320 and the discriminator on a half set of 160 for each epoch
-#discriminator is given real and fake y's while sgenerator is always given real y's
-
-y_train_fake = np.zeros([TRAIN_SET//2,1])
-y_train_real = np.ones([TRAIN_SET//2,1])
-y_gen = np.ones([TRAIN_SET,1])
-
-#run and train until photos meet expectations (stop & restart model with tweaks if loss goes to 0 in discriminator)
-print("\nSTART TRAINING")
-for epoch in range(1,EPOCHS+1):
-    start = time.time()
-    #shuffle L and AB channels then take a subset corresponding to each networks training size
-    print("\nEpoch - ", epoch, " - SHUFFLE L AND AB CHANNELS")
-    np.random.shuffle(X_train)
-    l = X_train[:TRAIN_SET]
-    np.random.shuffle(y_train)
-    ab = y_train[:TRAIN_SET//2]
-    
-    print("\nEpoch - ", epoch, " - PREDICT FAKE IMAGES")
-    fake_images = gen.predict(l[:TRAIN_SET//2], verbose=1)
-    
-    #Train on Real AB channels
-    print("\nEpoch - ", epoch, " - Train on Real AB channels")
-    d_loss_real = dis.fit(x=ab, y= y_train_real,batch_size=BATCH_SIZE,epochs=1,verbose=1) 
-    disc_real_losses.append(d_loss_real.history['loss'][-1])
-    
-    #Train on fake AB channels
-    print("\nEpoch - ", epoch, " - Train on fake AB channels")
-    d_loss_fake = dis.fit(x=fake_images,y=y_train_fake,batch_size=BATCH_SIZE,epochs=1,verbose=1)
-    disc_fake_losses.append(d_loss_fake.history['loss'][-1])
-    
-    #append the loss and accuracy and print loss
-    print("\nEpoch - ", epoch, " - append the loss and accuracy")
-    disc_acc.append(d_loss_fake.history['accuracy'][-1])
-    
-
-    #Train the gan by producing AB channels from L
-    print("\nEpoch - ", epoch, " - Train the gan")
-    g_loss = combined_network.fit(x=l, y=y_gen,batch_size=BATCH_SIZE,epochs=1,verbose=1)
-    #append and print generator loss
-    print("\nEpoch - ", epoch, " - append and print generator loss")
-    gen_losses.append(g_loss.history['loss'][-1])
-
-    print ('\nTime for epoch {} is {} sec'.format(epoch, time.time()-start))
-    
-    if epoch % 5 == 0:
-        print('Reached epoch:',epoch)
-        #predict colours
-        pred = gen.predict(T)
+class GAN():
+    def __init__(self):
+        self.gen = self.make_generator()
         
-        #get values from normalised values
-        # pred *= 128
-        pred = (pred +1) / 2 * 255 - 128
+        ############### Making the Discriminator ###############
+        self.disc = self.make_discriminator()
+        print("\nDiscriminator Training is OFF")
+        self.disc.trainable = False
+    
+    def get_images(self):
+        print("\nGetting Images")
+        X = []
+        files = glob.glob(DATA_PATH)
+        for filename in files:
+            X.append(img_to_array(load_img(filename)))
+        X = np.array(X, dtype=np.uint8)
+        print("\nData", X.shape)
         
-        #create blank image
-        img = np.zeros((256, 256, 3))
-        #get values from normalised values
-        img[:,:,0] = (T[0][:,:,0] + 1) * 50
-        #fill in colours
-        img[:,:,1:] = pred[0]
+        T = img_to_array(load_img(TEST_PATH))
+        T = np.array(T, dtype=np.uint8)
+        T = rgb2lab(T/255.0)
+        ab = T[:,:,1:]
+        T = T[:,:,0] / 50 - 1
+        T = T.reshape(1, 256, 256, 1)
         
-        imsave(".\\Full GAN\\result\\" + timestr + "_epoch_" + str(epoch) + ".png", lab2rgb(img))
+        if len(X) > 4000:
+            print("\nTrim dataset")
+            X = X[:4000]
+        else:
+            print("\nDataset not trimmed")
         
-        if epoch % 10 == 0:
-            gen.save('.\\Full GAN\\checkpoints\\generator_' + str(epoch)+ '_' + timestr +'.h5')
+        print("X : ", X.shape)
+        print("Test : ", T.shape)
+        
+        return self.dataset2lab(X),T
 
-gen.save('.\\Full GAN\\models\\GAN-' + timestr +'.h5')
-tfjs.converters.save_keras_model(gen, '.\\Full GAN\\models\\js')
+    def dataset2lab(self, data):
+        print("Converting to L*A*B* layers")
+        dataset = data.astype(np.float)
+        for i in range(dataset.shape[0]):
+            if(i % 50 == 0):
+                print("Converted file ",i,"/",dataset.shape[0])
+            dataset[i] = rgb2lab(dataset[i]/255.0)
+        return dataset
+    
+    def train_test_LAB_values(self):
+        images, T = self.get_images()
+        
+        print("\nSplitting the L* layer")
+        X = images[:,:,:,0]
+        X = X / 50 - 1
+        X = np.expand_dims(X, axis=-1)
 
-plt.plot(disc_real_losses, label='Discriminator real')
-plt.plot(disc_fake_losses, label='Discriminator fake')
-plt.plot(gen_losses, label='Generator')
-plt.savefig(".\\Full GAN\\result\\" + timestr + "-plot.png")
+        print("Splitting the A*B* layers")
+        Y = images[:,:,:,1:] 
+        Y = (Y + 128) / 255 * 2 - 1
+        
+        assert X[0,:,:].shape == (256, 256, 1), "Should be (n, 256, 256, 1)"
+        assert Y[0,:,:,:].shape == (256, 256, 2), "Should be (n, 256, 256, 2)"
+        
+        print("Train test split")
+        X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.1, random_state=42)
+        
+        print("X_train_L shape : ", X_train.shape)
+        print("X_train_AB shape : ", X_test.shape)
+        print("X_test_L shape : ", y_train.shape)
+        print("X_test_AB shape : ", y_test.shape)
+        
+        return np.array(X_train), np.array(X_test), np.array(y_train), np.array(y_test), T
+
+    def make_generator(self):
+        print("\nCreating Generator")
+        model = Sequential()
+        
+        model.add(Conv2D(64,(3,3),padding='same',strides=2, input_shape=GEN_SHAPE))
+        model.add(BatchNormalization())
+        model.add(LeakyReLU(0.2))
+        model.add(Conv2D(128, (3,3), padding='same',strides=2))
+        model.add(BatchNormalization())
+        model.add(LeakyReLU(0.2))
+        model.add(Conv2D(256, (3,3),padding='same',strides=2))
+        model.add(BatchNormalization())
+        model.add(LeakyReLU(0.2))
+        
+        model.add(Conv2D(512,(3,3),padding='same',strides=2))
+        model.add(BatchNormalization())
+        model.add(LeakyReLU(0.2))
+        
+        model.add(Conv2DTranspose(256,(3,3), strides=(2,2),padding='same'))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+        model.add(Conv2DTranspose(128,(3,3),strides=(2,2),padding='same'))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+        model.add(Conv2DTranspose(64,(3,3),strides=(2,2),padding='same'))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+        model.add(Conv2DTranspose(32,(3,3),strides=(2,2),padding='same'))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+        model.add(Conv2D(2,(3,3),padding='same'))
+        model.add(Activation('tanh'))
+        
+        gen_input = Input(shape=GEN_SHAPE)
+        out = model(gen_input)
+        
+        print("\nCreated Generator")
+        return k.Model(gen_input, out)
+
+    def make_discriminator(self):
+        print("\nCreating Discriminator")
+        model = Sequential()
+        model.add(Conv2D(32,(3,3), padding='same',strides=2,input_shape=DISC_SHAPE))
+        model.add(LeakyReLU(0.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(64,(3,3),padding='same',strides=2))
+        model.add(BatchNormalization())
+        model.add(LeakyReLU(.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(128,(3,3), padding='same', strides=2))
+        model.add(BatchNormalization())
+        model.add(LeakyReLU(0.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(256,(3,3), padding='same',strides=2))
+        model.add(BatchNormalization())
+        model.add(LeakyReLU(0.2))
+        model.add(Dropout(0.25))
+        model.add(Flatten())
+        model.add(Dense(1))
+        model.add(Activation('sigmoid'))
+        
+        dis_input = Input(shape=DISC_SHAPE)
+        out = model(dis_input)
+        
+        print("\nCreated Discriminator")
+        
+        dis = k.Model(dis_input, out)
+        dis.compile(loss='binary_crossentropy', 
+                        optimizer=Adam(lr=0.00008,beta_1=0.5,beta_2=0.999), 
+                        metrics=['accuracy']) 
+        
+        return dis
+
+    def train_gan(self, X_train, X_test, y_train, y_test, test_image):
+        #for file saving
+        timestr = time.strftime("%d%m%y-%H%M")
+        
+        #Defining the combined model of the Generator and the Discriminator 
+        print("\nDefining the combined model")
+        l_channel = Input(shape=GEN_SHAPE)
+        image = self.gen(l_channel) 
+        valid = self.disc(image)
+
+        gan_network = k.Model(l_channel, valid) 
+        gan_network.compile(loss='binary_crossentropy', 
+                                optimizer=Adam(lr=0.0001,beta_1=0.5,beta_2=0.999))
+
+        #creates lists to log the losses and accuracy
+        print("\nlosses and accuracy")
+        gen_losses = []
+        disc_real_losses = []
+        disc_fake_losses=[] 
+        disc_acc = []
+
+        #train the generator on a full set of 320 and the discriminator on a half set of 160 for each epoch
+        #discriminator is given real and fake y's while sgenerator is always given real y's
+
+        y_train_fake = np.zeros([TRAIN_SET//2,1])
+        y_train_real = np.ones([TRAIN_SET//2,1])
+        y_gen = np.ones([TRAIN_SET,1])
+
+        #run and train until photos meet expectations (stop & restart model with tweaks if loss goes to 0 in discriminator)
+        print("\nSTART TRAINING")
+        for epoch in range(1,EPOCHS+1):
+            start = time.time()
+            #shuffle L and AB channels then take a subset corresponding to each networks training size
+            print("\nEpoch - ", epoch, " - SHUFFLE L AND AB CHANNELS")
+            np.random.shuffle(X_train)
+            l = X_train[:TRAIN_SET]
+            np.random.shuffle(y_train)
+            ab = y_train[:TRAIN_SET//2]
+            
+            print("\nEpoch - ", epoch, " - PREDICT FAKE IMAGES")
+            fake_images = self.gen.predict(l[:TRAIN_SET//2], verbose=1)
+            
+            #Train on Real AB channels
+            print("\nEpoch - ", epoch, " - Train on Real AB channels")
+            d_loss_real = self.disc.fit(x=ab, y= y_train_real,batch_size=BATCH_SIZE,epochs=1,verbose=1) 
+            disc_real_losses.append(d_loss_real.history['loss'][-1])
+            
+            #Train on fake AB channels
+            print("\nEpoch - ", epoch, " - Train on fake AB channels")
+            d_loss_fake = self.disc.fit(x=fake_images,y=y_train_fake,batch_size=BATCH_SIZE,epochs=1,verbose=1)
+            disc_fake_losses.append(d_loss_fake.history['loss'][-1])
+            
+            #append the loss and accuracy and print loss
+            print("\nEpoch - ", epoch, " - append the loss and accuracy")
+            disc_acc.append(d_loss_fake.history['accuracy'][-1])
+            
+
+            #Train the gan by producing AB channels from L
+            print("\nEpoch - ", epoch, " - Train the gan")
+            g_loss = gan_network.fit(x=l, y=y_gen,batch_size=BATCH_SIZE,epochs=1,verbose=1)
+            #append and print generator loss
+            print("\nEpoch - ", epoch, " - append and print generator loss")
+            gen_losses.append(g_loss.history['loss'][-1])
+
+            print ('\nTime for epoch {} is {} sec'.format(epoch, time.time()-start))
+            
+            if epoch % 5 == 0:
+                print('Reached epoch:',epoch)
+                #predict colours
+                pred = self.gen.predict(test_image)
+                
+                #get values from normalised values
+                # pred *= 128
+                pred = (pred +1) / 2 * 255 - 128
+                
+                #create blank image
+                img = np.zeros((256, 256, 3))
+                
+                #get values from normalised values
+                img[:,:,0] = (test_image[0][:,:,0] + 1) * 50
+                
+                #fill in colours
+                img[:,:,1:] = pred[0]
+                
+                imsave(".\\Full GAN\\result\\" + timestr + "_epoch_" + str(epoch) + ".png", lab2rgb(img))
+                
+                if epoch % 10 == 0:
+                    self.gen.save('.\\Full GAN\\checkpoints\\generator_' + str(epoch)+ '_' + timestr +'.h5')
+        
+        #save generator and the loss models
+        self.gen.save('.\\Full GAN\\models\\GAN-' + timestr +'.h5')
+        tfjs.converters.save_keras_model(self.gen, '.\\Full GAN\\models\\js')
+
+        # plt.plot(disc_real_losses, label='Discriminator real')
+        # plt.plot(disc_fake_losses, label='Discriminator fake')
+        # plt.plot(gen_losses, label='Generator')
+        # plt.savefig(".\\Full GAN\\result\\" + timestr + "-plot.png")
+
+
+if __name__ == "__main__":
+    gan = GAN()
+    X_train, X_test, y_train, y_test, T = gan.train_test_LAB_values()
+    gan.train_gan(X_train, X_test, y_train, y_test, T)
