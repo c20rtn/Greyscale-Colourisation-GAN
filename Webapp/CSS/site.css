@@ -5,6 +5,17 @@ html,body{
     height : 100%;
     padding: 20px;
 }
+a:link, a:visited {
+  color: OrangeRed;
+  text-decoration: none;
+}
+
+a:hover, a:active {
+  color: OrangeRed !important;
+  text-decoration: underline;
+}
+
+
 .header-row{
     background-color: lightblue;
     padding: 10px;
