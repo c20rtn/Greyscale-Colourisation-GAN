@@ -49,6 +49,11 @@ class GAN():
         self.disc = self.make_discriminator()
         print("\nDiscriminator Training is OFF")
         self.disc.trainable = False
+        
+        self.gen_losses = []
+        self.disc_real_losses = []
+        self.disc_fake_losses=[] 
+        self.disc_acc = []
     
     def get_images(self):
         print("\nGetting Images")
@@ -155,19 +160,15 @@ class GAN():
         model = Sequential()
         model.add(Conv2D(32,(3,3), padding='same',strides=2,input_shape=DISC_SHAPE))
         model.add(LeakyReLU(0.2))
-        model.add(Dropout(0.25))
         model.add(Conv2D(64,(3,3),padding='same',strides=2))
         model.add(BatchNormalization())
         model.add(LeakyReLU(.2))
-        model.add(Dropout(0.25))
         model.add(Conv2D(128,(3,3), padding='same', strides=2))
         model.add(BatchNormalization())
         model.add(LeakyReLU(0.2))
-        model.add(Dropout(0.25))
         model.add(Conv2D(256,(3,3), padding='same',strides=2))
         model.add(BatchNormalization())
         model.add(LeakyReLU(0.2))
-        model.add(Dropout(0.25))
         model.add(Flatten())
         model.add(Dense(1))
         model.add(Activation('sigmoid'))
@@ -190,20 +191,13 @@ class GAN():
         
         #Defining the combined model of the Generator and the Discriminator 
         print("\nDefining the combined model")
-        l_channel = Input(shape=GEN_SHAPE)
-        image = self.gen(l_channel) 
+        gan_input = Input(shape=GEN_SHAPE)
+        image = self.gen(gan_input) 
         valid = self.disc(image)
 
-        gan_network = k.Model(l_channel, valid) 
+        gan_network = k.Model(gan_input, valid) 
         gan_network.compile(loss='binary_crossentropy', 
                                 optimizer=Adam(lr=0.0001,beta_1=0.5,beta_2=0.999))
-
-        #creates lists to log the losses and accuracy
-        print("\nlosses and accuracy")
-        gen_losses = []
-        disc_real_losses = []
-        disc_fake_losses=[] 
-        disc_acc = []
 
         #train the generator on a full set of 320 and the discriminator on a half set of 160 for each epoch
         #discriminator is given real and fake y's while sgenerator is always given real y's
@@ -229,16 +223,16 @@ class GAN():
             #Train on Real AB channels
             print("\nEpoch - ", epoch, " - Train on Real AB channels")
             d_loss_real = self.disc.fit(x=ab, y= y_train_real,batch_size=BATCH_SIZE,epochs=1,verbose=1) 
-            disc_real_losses.append(d_loss_real.history['loss'][-1])
+            self.disc_real_losses.append(d_loss_real.history['loss'][-1])
             
             #Train on fake AB channels
             print("\nEpoch - ", epoch, " - Train on fake AB channels")
             d_loss_fake = self.disc.fit(x=fake_images,y=y_train_fake,batch_size=BATCH_SIZE,epochs=1,verbose=1)
-            disc_fake_losses.append(d_loss_fake.history['loss'][-1])
+            self.disc_fake_losses.append(d_loss_fake.history['loss'][-1])
             
             #append the loss and accuracy and print loss
             print("\nEpoch - ", epoch, " - append the loss and accuracy")
-            disc_acc.append(d_loss_fake.history['accuracy'][-1])
+            self.disc_acc.append(d_loss_fake.history['accuracy'][-1])
             
 
             #Train the gan by producing AB channels from L
@@ -246,7 +240,7 @@ class GAN():
             g_loss = gan_network.fit(x=l, y=y_gen,batch_size=BATCH_SIZE,epochs=1,verbose=1)
             #append and print generator loss
             print("\nEpoch - ", epoch, " - append and print generator loss")
-            gen_losses.append(g_loss.history['loss'][-1])
+            self.gen_losses.append(g_loss.history['loss'][-1])
 
             print ('\nTime for epoch {} is {} sec'.format(epoch, time.time()-start))
             
@@ -277,10 +271,10 @@ class GAN():
         self.gen.save('.\\Full GAN\\models\\GAN-' + timestr +'.h5')
         tfjs.converters.save_keras_model(self.gen, '.\\Full GAN\\models\\js')
 
-        # plt.plot(disc_real_losses, label='Discriminator real')
-        # plt.plot(disc_fake_losses, label='Discriminator fake')
-        # plt.plot(gen_losses, label='Generator')
-        # plt.savefig(".\\Full GAN\\result\\" + timestr + "-plot.png")
+        plt.plot(self.disc_real_losses, label='Discriminator real')
+        plt.plot(self.disc_fake_losses, label='Discriminator fake')
+        plt.plot(self.gen_losses, label='Generator')
+        plt.savefig(".\\Full GAN\\result\\" + timestr + "-plot.png")
 
 
 if __name__ == "__main__":
