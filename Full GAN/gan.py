@@ -30,11 +30,9 @@ config = ConfigProto()
 config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
 
-# DATA_PATH  = '..\\Final Year Project\\Datasets\\data\\1\\*.jpg'
 DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\coast\\*.jpg'
 TEST_PATH  = '.\\Full GAN\\test\\beach.jpg'
 EPOCHS = 20
-BUFFER_SIZE = 5000
 BATCH_SIZE = 20
 DISC_SHAPE = (256,256,2)
 GEN_SHAPE = (256,256,1)
@@ -42,6 +40,7 @@ TRAIN_SET = 400
 
 class GAN():
     def __init__(self):
+        ############### Making the Generator ###############
         self.gen = self.make_generator()
         
         ############### Making the Discriminator ###############
@@ -49,6 +48,7 @@ class GAN():
         print("\nDiscriminator Training is OFF")
         self.disc.trainable = False
         
+        ############### Making the Arrays for Loss Plot ###############
         self.gen_losses = []
         self.disc_real_losses = []
         self.disc_fake_losses=[] 
@@ -188,9 +188,7 @@ class GAN():
         #for file saving
         timestr = time.strftime("%d%m%y-%H%M")
         
-        #Defining the combined model of the Generator and the Discriminator 
         print("\nDefining the combined model")
-        
         gan_input = Input(shape=GEN_SHAPE)
         gen_output = self.gen(gan_input) 
         disc_output = self.disc(gen_output)
@@ -199,18 +197,15 @@ class GAN():
         gan_network.compile(loss='binary_crossentropy', 
                                 optimizer=Adam(lr=0.0001,beta_1=0.5,beta_2=0.999))
 
-        #train the generator on a full set of 320 and the discriminator on a half set of 160 for each epoch
-        #discriminator is given real and fake y's while sgenerator is always given real y's
-
-        y_train_fake = np.zeros([TRAIN_SET//2,1])
-        y_train_real = np.ones([TRAIN_SET//2,1])
+        y_fake = np.zeros([TRAIN_SET//2,1])
+        y_real = np.ones([TRAIN_SET//2,1])
         y_gen = np.ones([TRAIN_SET,1])
 
-        #run and train until photos meet expectations (stop & restart model with tweaks if loss goes to 0 in discriminator)
+
         print("\nSTART TRAINING")
         for epoch in range(1,EPOCHS+1):
             start = time.time()
-            #shuffle L and AB channels then take a subset corresponding to each networks training size
+            
             print("\nEpoch - ", epoch, " - SHUFFLE L AND AB CHANNELS")
             np.random.shuffle(X_train)
             l = X_train[:TRAIN_SET]
@@ -220,25 +215,20 @@ class GAN():
             print("\nEpoch - ", epoch, " - PREDICT FAKE IMAGES")
             fake_images = self.gen.predict(l[:TRAIN_SET//2], verbose=1)
             
-            #Train on Real AB channels
             print("\nEpoch - ", epoch, " - Train on Real AB channels")
-            d_loss_real = self.disc.fit(x=ab, y= y_train_real,batch_size=BATCH_SIZE,epochs=1,verbose=1) 
+            d_loss_real = self.disc.fit(x=ab, y= y_real,batch_size=BATCH_SIZE,epochs=1,verbose=1) 
             self.disc_real_losses.append(d_loss_real.history['loss'][-1])
             
-            #Train on fake AB channels
             print("\nEpoch - ", epoch, " - Train on fake AB channels")
-            d_loss_fake = self.disc.fit(x=fake_images,y=y_train_fake,batch_size=BATCH_SIZE,epochs=1,verbose=1)
+            d_loss_fake = self.disc.fit(x=fake_images,y=y_fake,batch_size=BATCH_SIZE,epochs=1,verbose=1)
             self.disc_fake_losses.append(d_loss_fake.history['loss'][-1])
             
-            #append the loss and accuracy and print loss
             print("\nEpoch - ", epoch, " - append the loss and accuracy")
             self.disc_acc.append(d_loss_fake.history['accuracy'][-1])
-            
 
-            #Train the gan by producing AB channels from L
             print("\nEpoch - ", epoch, " - Train the gan")
             g_loss = gan_network.fit(x=l, y=y_gen,batch_size=BATCH_SIZE,epochs=1,verbose=1)
-            #append and print generator loss
+            
             print("\nEpoch - ", epoch, " - append and print generator loss")
             self.gen_losses.append(g_loss.history['loss'][-1])
 
@@ -246,31 +236,28 @@ class GAN():
             
             if epoch % 5 == 0:
                 print('Reached epoch:',epoch)
-                #predict colours
+                # predict colourisations
                 pred = self.gen.predict(test_image)
-                
-                #get values from normalised values
-                # pred *= 128
                 pred = (pred +1) / 2 * 255 - 128
                 
-                #create blank image
+                # create image array of 0s
                 img = np.zeros((256, 256, 3))
                 
-                #get values from normalised values
+                # fill in image array
                 img[:,:,0] = (test_image[0][:,:,0] + 1) * 50
-                
-                #fill in colours
                 img[:,:,1:] = pred[0]
                 
+                # save the image
                 imsave(".\\Full GAN\\result\\" + timestr + "_epoch_" + str(epoch) + ".png", lab2rgb(img))
                 
                 if epoch % 10 == 0:
                     self.gen.save('.\\Full GAN\\checkpoints\\generator_' + str(epoch)+ '_' + timestr +'.h5')
         
-        #save generator and the loss models
+        #save generator
         self.gen.save('.\\Full GAN\\models\\GAN-' + timestr +'.h5')
         tfjs.converters.save_keras_model(self.gen, '.\\Full GAN\\models\\js')
 
+        #create plots for the losses and accuracy
         plt.plot(self.disc_real_losses, label='Discriminator real')
         plt.plot(self.disc_fake_losses, label='Discriminator fake')
         plt.plot(self.gen_losses, label='Generator')
