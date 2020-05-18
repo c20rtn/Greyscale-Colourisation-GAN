@@ -7,7 +7,6 @@ import os
 import random
 import time
 import cv2
-import tqdm
 import matplotlib as mat
 import matplotlib.pyplot as plt
 from matplotlib.image import imread
@@ -39,7 +38,7 @@ BUFFER_SIZE = 5000
 BATCH_SIZE = 20
 DISC_SHAPE = (256,256,2)
 GEN_SHAPE = (256,256,1)
-TRAIN_SET = 320
+TRAIN_SET = 400
 
 class GAN():
     def __init__(self):
@@ -191,11 +190,12 @@ class GAN():
         
         #Defining the combined model of the Generator and the Discriminator 
         print("\nDefining the combined model")
+        
         gan_input = Input(shape=GEN_SHAPE)
-        image = self.gen(gan_input) 
-        valid = self.disc(image)
-
-        gan_network = k.Model(gan_input, valid) 
+        gen_output = self.gen(gan_input) 
+        disc_output = self.disc(gen_output)
+        gan_network = k.Model(gan_input, disc_output) 
+        
         gan_network.compile(loss='binary_crossentropy', 
                                 optimizer=Adam(lr=0.0001,beta_1=0.5,beta_2=0.999))
 
