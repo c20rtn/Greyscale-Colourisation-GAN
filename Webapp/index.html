@@ -230,7 +230,7 @@
             };
             async function learn(input){
                 if(document.getElementById('alpha').checked){
-                    const model = await tf.loadLayersModel('https://raw.githubusercontent.com/c20rtn/Greyscale-Colourisation-GAN/master/Models/Alpha/js/model.json');
+                    const model = await tf.loadLayersModel('https://raw.githubusercontent.com/c20rtn/c20rtn.github.io/master/Models/Alpha/js/model.json');
                     model.summary()
 
                     let output = model.predict(tf.tensor4d(input, [1, 256, 256, 1]));
@@ -242,7 +242,7 @@
                     return arr;
                 }
                 else if(document.getElementById('beta').checked){
-                    const model = await tf.loadLayersModel('https://raw.githubusercontent.com/c20rtn/Greyscale-Colourisation-GAN/master/Models/Beta/js/model.json');
+                    const model = await tf.loadLayersModel('https://raw.githubusercontent.com/c20rtn/c20rtn.github.io/master/Models/Beta/js/model.json');
                     model.summary()
 
                     let output = model.predict(tf.tensor4d(input, [1, 256, 256, 1]));
@@ -254,7 +254,7 @@
                     return arr;
                 }
                 else{
-                    const model = await tf.loadLayersModel('https://raw.githubusercontent.com/c20rtn/Greyscale-Colourisation-GAN/master/Models/GAN/js/model.json');
+                    const model = await tf.loadLayersModel('https://raw.githubusercontent.com/c20rtn/c20rtn.github.io/master/Models/GAN/js/model.json');
                     model.summary()
 
                     let output = model.predict(tf.tensor4d(input, [1, 256, 256, 1]));
