@@ -30,7 +30,7 @@ config = ConfigProto()
 config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
 
-DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\coast\\n203015.jpg'
+DATA_PATH  = '.\\cvcl.mit.edu\\coast\\n203015.jpg'
 TEST_PATH  = '.\\Alpha\\test\\*.jpg'
 EPOCHS = 100
 
@@ -161,14 +161,13 @@ def output_colourisations(model, test):
         # fig.tight_layout()
         # plt.savefig('first-result-'+str(count)+'.png', bbox_inches='tight')
 
-print("\n\n\n",tf.__version__,"\n\n\n")
-print("\n\n\n",tfjs.__version__,"\n\n\n")
+print(tf.__version__,"\n\n\n")
+print(tfjs.__version__,)
 X, Y, testimages = get_images()
 gen = create_generator()
 gen = train_gen(gen, X, Y)
 
-# 
-# gen = tf.keras.models.load_model('.\\Alpha\\Models\\alpha.h5')
+# gen = tf.keras.models.load_model('.\\Models\\Alpha\\alpha.h5')
 
 # Check its architecture
 gen.summary()
@@ -176,4 +175,4 @@ gen.summary()
 output_colourisations(gen, testimages)
 
 # gen.save('.\\Alpha\\Models\\model.h5')
-# tfjs.converters.save_keras_model(gen, '.\\Alpha\\Models\\JS')
+# tfjs.converters.save_keras_model(gen, '.\\Models\\Alpha\\js')

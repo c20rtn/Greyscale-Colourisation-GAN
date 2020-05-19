@@ -2,3 +2,4 @@
 *.v2
 output/
 training_checkpoints/
+cvcl.mit.edu/

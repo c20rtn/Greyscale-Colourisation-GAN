@@ -30,8 +30,11 @@ config = ConfigProto()
 config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
 
+# MODEL_PATH = '.\\Models\\Alpha\\alpha.h5'
+# MODEL_PATH = '.\\Models\\Beta\\beta.h5'
+MODEL_PATH = '.\\Models\\GAN\\gan.h5'
+
 TEST_PATH  = '.\\Full GAN\\test\\*'
-EPOCHS = 500
 
 def output_colourisations(model, test):
     count = 0
@@ -41,18 +44,28 @@ def output_colourisations(model, test):
         testimage = img_to_array(load_img(img))
         testimage = rgb2lab(1.0/255*testimage)
         testimage = testimage[:,:,0]
-        testimage = testimage / 50 - 1
+        
+        if MODEL_PATH == '.\\Models\\GAN\\gan.h5':
+            testimage = testimage / 50 - 1
+            
         testimage = testimage.reshape(1, 256, 256, 1)
 
         output = model.predict(testimage)
-        output = (output +1) / 2 * 255 - 128
+        
+        if MODEL_PATH == '.\\Models\\GAN\\gan.h5':
+            output = (output +1) / 2 * 255 - 128
+        else:
+            output *= 128
 
         print("\nShow colorizations")
 
         timestr = time.strftime("%Y%m%d-%H%M%S")
 
         cur = np.zeros((256, 256, 3))
-        cur[:,:,0] = (testimage[0][:,:,0] + 1) * 50
+        if MODEL_PATH == '.\\Models\\GAN\\gan.h5':
+            cur[:,:,0] = (testimage[0][:,:,0] + 1) * 50
+        else:
+            cur[:,:,0] = testimage[0][:,:,0]
         cur[:,:,1:] = output[0]
 
         def extract_single_dim_from_LAB_convert_to_RGB(image,idim):
@@ -93,13 +106,13 @@ def output_colourisations(model, test):
         ax[4].axis('off')
         ax[4].set_title("B: blue to yellow")
 
-        #plt.show()
-        fig.tight_layout()
-        plt.savefig('.\\Full GAN\\temp\\gan-result-'+str(count)+'.png', bbox_inches='tight')
+        plt.show()
+        # fig.tight_layout()
+        # plt.savefig('.\\Full GAN\\temp\\gan-result-'+str(count)+'.png', bbox_inches='tight')
 
 T = glob.glob(TEST_PATH)
 
-gen = tf.keras.models.load_model('.\\Models\\GAN\\gan.h5')
+gen = tf.keras.models.load_model(MODEL_PATH)
 # Check its architecture
 gen.summary()
 

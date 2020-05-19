@@ -30,13 +30,13 @@ config = ConfigProto()
 config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
 
-DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\coast\\*.jpg'
-TEST_PATH  = '.\\Full GAN\\test\\beach.jpg'
+DATA_PATH  = '.\\cvcl.mit.edu\\coast\\*.jpg'
+TEST_PATH  = '.\\Full GAN\\test\\sample1.jpg'
 EPOCHS = 20
 BATCH_SIZE = 20
 DISC_SHAPE = (256,256,2)
 GEN_SHAPE = (256,256,1)
-TRAIN_SET = 400
+TRAIN_SET = 300
 
 class GAN():
     def __init__(self):

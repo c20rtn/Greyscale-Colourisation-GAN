@@ -30,8 +30,7 @@ config = ConfigProto()
 config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
 
-# DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\*\\*.jpg'
-DATA_PATH  = '..\\Final Year Project\\Datasets\\cvcl.mit.edu\\coast\\*.jpg'
+DATA_PATH  = '.\\cvcl.mit.edu\\coast\\*.jpg'
 TEST_PATH  = '.\\Beta\\test\\*.jpg'
 EPOCHS = 100
 BATCH_SIZE = 8
@@ -194,4 +193,4 @@ gen = fit_gen(gen, X_train, X_test, y_train, y_test)
 output_colourisations(gen, testimages)
 
 gen.save('.\\Beta\\Models\\beta.h5')
-tfjs.converters.save_keras_model(gen, '.\\Beta\\Models\\JS')
+# tfjs.converters.save_keras_model(gen, '.\\Beta\\Models\\JS')
